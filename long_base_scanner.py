@@ -194,8 +194,9 @@ def scan_accum(sym, daily, now) -> dict | None:
     if day:
         vol.append(f'day {day["x"]:.1f}x 50-day avg ({fp_date(day["date"])})')
     tfs = "+".join(sorted({t[0].tf for t in out}, reverse=True))
+    st = b["status"].replace("bar not closed", f'{one} not closed')
     return {
-        "status": f'{b["status"]} ({"weekly" if p.tf == "W" else "monthly"})',
+        "status": st if "not closed" in st else f'{st} ({"weekly" if p.tf == "W" else "monthly"})',
         "facts": [["Base", f'{months:.0f} months on the {"weekly" if p.tf == "W" else "monthly"} chart, '
                            f'{b["width"] * 100:.0f}% wide, top tested {b["tests"]}x'],
                   ["Vs resistance", f'{(c / b["res"] - 1) * 100:+.1f}%'],
@@ -217,7 +218,7 @@ def fp_date(s):
 def scan_ipo(sym, daily, now, listed: dt.date | None) -> dict | None:
     daily = daily.dropna(subset=["High", "Low", "Close"])
     first = daily.index[0].date()
-    lst = listed or first
+    lst = min(listed, first) if listed else first        # SME -> main board moves: NSE date is the move date
     today = daily.index[-1].date()
     if (today - lst).days > IPO_MAX_YEARS * 365 or (today - first).days > IPO_MAX_YEARS * 365 + 30:
         return None
@@ -250,7 +251,7 @@ def scan_ipo(sym, daily, now, listed: dt.date | None) -> dict | None:
     return {
         "status": b["status"].replace("bar not closed", "week not closed"),
         "facts": [["Listed", f'{fp_date(lst.isoformat())} ({age:.0f} months ago)'
-                             + ("" if listed else " - first trading day on Yahoo")],
+                             + (f', NSE main board {fp_date(listed.isoformat())}' if listed and (listed - first).days > 30 else "")],
                   ["IPO base", f'{b["length"]} weeks, {b["width"] * 100:.0f}% wide, top tested {b["tests"]}x'],
                   ["Vs resistance", f'{(c / b["res"] - 1) * 100:+.1f}%'],
                   ["From listing-day close", f'{(c / ipo_px - 1) * 100:+.0f}%'],
