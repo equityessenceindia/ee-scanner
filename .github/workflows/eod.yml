@@ -1,0 +1,35 @@
+name: EOD scan
+
+on:
+  schedule:
+    - cron: "30 11 * * 1-5"     # 5:00 PM IST, Monday to Friday (GitHub may start it a little late)
+  workflow_dispatch:             # "Run workflow" button for a manual run
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eod-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install libraries
+        run: pip install -r requirements.txt
+      - name: Run the scanners
+        run: python app_scan.py
+      - name: Publish today's results
+        run: |
+          git config user.name "eod-scan-bot"
+          git config user.email "eod-scan-bot@users.noreply.github.com"
+          git add docs/data cache/app_screener.json cache/transcript_points.json caps_fallback.csv
+          git commit -m "EOD scan $(date -u +%Y-%m-%d)" || echo "nothing new"
+          git push
