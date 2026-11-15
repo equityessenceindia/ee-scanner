@@ -14,6 +14,8 @@ Scanners (the same code as the laptop scanners in this folder):
   elliott   Elliott wave 2 (first impulse off a major low): wave 2 in progress / buy zone /
             wave 3 starting, with an unusual-volume print at the end of wave 1 or start of wave 3
   base      Long consolidation (26+ weeks) breakout, with unusual volume near the breakout
+  accum     Long weekly / monthly base breakout with an unusual-volume print inside the base
+  ipo       Recent IPO (last 3 years) coming out of its post-listing base on good volume
   s2early   Minervini stage 2 - just started / resumed, or early stage 2 by the maturity model
   s2late    Stage 2 maturing into stage 3 (late stage 2 / topping) with volume drying up
 Every list needs "Regular" concalls (Screener.in: 4+ calls in 24 months, latest within 7 months;
@@ -42,6 +44,7 @@ import stage2_scanner as s2
 import stage2_maturity as sm
 import concall_points as cp
 import sector_rotation as sr
+import long_base_scanner as lb
 
 HERE = Path(__file__).resolve().parent
 DOCS = HERE / "docs" / "data"
@@ -420,11 +423,16 @@ def main(argv=None):
     asof = max(d.index[-1] for d in prices.values()).date()
     log(f"Prices up to {asof} for {len(prices)} stocks")
 
-    hits = {k: {} for k in ("flag", "elliott", "base", "s2early", "s2late")}
+    try:
+        listed = ip.listing_dates()
+    except Exception:
+        listed = {}
+    hits = {k: {} for k in ("flag", "elliott", "base", "accum", "ipo", "s2early", "s2late")}
     for i, (s, d) in enumerate(prices.items(), 1):
         d = d.dropna(subset=["High", "Low", "Close"])
         for key, fn in (("flag", lambda: scan_flag(s, d)), ("elliott", lambda: scan_elliott(s, d)),
-                        ("base", lambda: scan_base(s, d, now))):
+                        ("base", lambda: scan_base(s, d, now)), ("accum", lambda: lb.scan_accum(s, d, now)),
+                        ("ipo", lambda: lb.scan_ipo(s, d, now, listed.get(s)))):
             try:
                 r = fn()
                 if r:
@@ -441,10 +449,6 @@ def main(argv=None):
 
     cand = set().union(*[set(v) for v in hits.values()]) | early_c | late_c
     comp = company_pages(sorted(meta), force=cand)
-    try:
-        listed = ip.listing_dates()
-    except Exception:
-        listed = {}
 
     log("Sector rotation ...")
     sectors, sector_of = sr.run(prices, {s: m["cap"] for s, m in meta.items()})
