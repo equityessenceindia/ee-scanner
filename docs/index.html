@@ -97,6 +97,23 @@ blockquote{margin:4px 0 8px;padding:6px 10px;border-left:3px solid var(--accent)
 .more[hidden]{display:none}
 .note{font-size:12px;color:var(--ink3);margin-top:8px}
 .tag{font-size:11px;font-weight:700;color:var(--warn);background:var(--warnBg);border-radius:6px;padding:1px 6px}
+/* sector rotation */
+.seg{display:flex;gap:4px;padding:4px;background:var(--surface2);border-radius:12px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:transparent;padding:8px 4px;border-radius:9px;font-weight:600;font-size:13.5px;color:var(--ink2);cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.mini{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.mini button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--ink2);cursor:pointer}
+.mini button[aria-selected="true"]{background:var(--chipOn);color:var(--chipOnInk);border-color:transparent}
+.pill.bad{background:#fbe3df;color:var(--down)} .pill.neu{background:var(--surface2);color:var(--ink2)}
+:root[data-theme="dark"] .pill.bad{background:#3a1d19}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill.bad{background:#3a1d19}}
+.qd{font-style:normal;display:inline-block;vertical-align:2px;font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;margin-left:6px;background:var(--surface2);color:var(--ink2)}
+.qd.Leading{color:var(--up)} .qd.Improving{color:var(--brand2)} .qd.Weakening{color:var(--warn)} .qd.Lagging{color:var(--down)}
+.big{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.sum{font-size:13.5px;color:var(--ink2);margin:0 0 12px}
+.sum b{color:var(--ink)}
+svg.spark{display:block;width:100%;height:auto;margin-top:10px}
+.why{font-size:13.5px;margin:6px 0 0;color:var(--ink2)}
 footer{font-size:12px;color:var(--ink3);padding:8px 16px 28px;max-width:760px;margin:0 auto}
 dialog{border:0;border-radius:16px;padding:18px;max-width:520px;width:calc(100% - 32px);background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
@@ -142,10 +159,18 @@ const SCANS = [
    rules:["Maturity: Late stage 2 or Topping – stage 3 risk (bases count, extension, climax run, distribution, 50-DMA break, flat 200-DMA, slowing EPS)","Volume drying: last 10 days ≤75% of the prior 50-day average","Useful for booking profits / avoiding late entries"]},
   {k:"concalls", t:"Concalls", d:"Latest earnings calls in this group: results versus a year ago and the key numbers management gave on the call.",
    rules:["Calls held in the last ~75 days, newest first","Results from the quarterly table; quotes picked automatically from the transcript (guidance, orders, capex, margins)","Companies with irregular concalls are marked"]},
+  {k:"sectors", t:"Sector Rotation", d:"Which sectors money is moving into or out of, and which sector ETF charts look bullish on the long-term (weekly / monthly) view.",
+   rules:["Money flow: for every stock, turnover (price × volume) counts as buying when the day closes near its high and selling when it closes near its low (Chaikin money flow). Summed by NSE sector for 1 week, 1 month and 3 months.",
+     "Flow strength = net flow ÷ turnover. Inflow ≥ +2%, strong inflow ≥ +6% with the sector's share of market turnover up 10%+ (outflow the same way down).",
+     "Share of turnover: the sector's share of all trading this month versus the 3 months before — rising means money is rotating in.",
+     "Breadth: % of the sector's stocks above their 50-day average. Quadrant: the sector's long-term relative strength versus all stocks (Leading → Weakening → Lagging → Improving).",
+     "ETF charts (weekly): 30-week average and its slope (Weinstein stages), 10-month average, Mansfield relative strength versus Nifty 50, higher highs / higher lows, distance from the 52-week high.",
+     "Strong uptrend = above a rising 30-week average for 20+ weeks, monthly trend up, outperforming Nifty, near the 52-week high — likely to continue. Reviving = turning up from a weak phase with improving relative strength.",
+     "An estimate from price and volume — not actual FII / DII / mutual fund flow data."]},
 ];
 const CAPS = ["Large","Mid","Small","Micro"];
 const D = window.SCAN_DATA || null;
-const st = {cap: get("cap") || "Small", scan: get("scan") || "flag", q: ""};
+const st = {cap: get("cap") || "Small", scan: get("scan") || "flag", q: "", sv: get("sv") || "flow", fg: get("fg") || "All"};
 function get(k){try{return localStorage.getItem("ee_"+k)}catch(e){return null}}
 function set(k,v){try{localStorage.setItem("ee_"+k,v)}catch(e){}}
 const $ = s => document.querySelector(s);
@@ -157,11 +182,12 @@ function list(cap, scan){ return (D && D.caps && D.caps[cap] && D.caps[cap][scan
 
 function renderTabs(){
   $("#caps").innerHTML = CAPS.map(c => {
-    const n = SCANS.filter(s=>s.k!=="concalls").reduce((a,s)=>a+list(c,s.k).length,0);
+    const n = SCANS.filter(s=>s.k!=="concalls"&&s.k!=="sectors").reduce((a,s)=>a+list(c,s.k).length,0);
     return `<button role="tab" aria-selected="${c===st.cap}" data-cap="${c}">${c}<small>${n} setups</small></button>`;
   }).join("");
   $("#chips").innerHTML = SCANS.map(s =>
-    `<button role="tab" aria-selected="${s.k===st.scan}" data-scan="${s.k}">${s.t}<span class="n">${list(st.cap,s.k).length}</span></button>`).join("");
+    `<button role="tab" aria-selected="${s.k===st.scan}" data-scan="${s.k}">${s.t}${s.k==="sectors"?"":`<span class="n">${list(st.cap,s.k).length}</span>`}</button>`).join("");
+  $("#caps").style.display = st.scan==="sectors" ? "none" : "";
 }
 
 function card(x){
@@ -207,33 +233,132 @@ function concallCard(x, i){
   </article>`;
 }
 
+// ---------------------------------------------------------------- sector rotation
+const crs = v => v==null ? "–" : (v>=0?"+":"−") + "₹" + Math.abs(Math.round(v)).toLocaleString("en-IN") + " cr";
+const pct = (v,d=1) => v==null ? "–" : (v>=0?"+":"") + Number(v).toFixed(d) + "%";
+const updn = v => v==null ? "" : v>=0 ? "up" : "down";
+function flowPill(l){ return /inflow/i.test(l) ? "" : /outflow/i.test(l) ? " bad" : " neu"; }
+function etfPill(v){ return /Strong|Reviving|^Uptrend$/.test(v) ? "" : /Downtrend|Topping/.test(v) ? " bad" : " warn"; }
+function bars(vals, weeks){
+  const w=300,h=54,n=vals.length||1,m=Math.max(1,...vals.map(v=>Math.abs(v||0))),bw=w/n;
+  const r = vals.map((v,i)=>{const bh=Math.abs(v||0)/m*(h/2-3);const y=(v||0)>=0?h/2-bh:h/2;
+    return `<rect x="${(i*bw+1.5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw-3).toFixed(1)}" height="${Math.max(bh,.8).toFixed(1)}" rx="1.5" fill="var(--${(v||0)>=0?"up":"down"})"><title>${weeks&&weeks[i]?"Week to "+weeks[i]+": ":""}${crs(v)}</title></rect>`;}).join("");
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Weekly net money flow, last 12 weeks"><line x1="0" x2="${w}" y1="${h/2}" y2="${h/2}" stroke="var(--line)"/>${r}</svg>`;
+}
+function line(ch){
+  if(!ch||!ch.c) return "";
+  const c=ch.c, ma=ch.ma, all=c.concat(ma).filter(v=>v!=null), lo=Math.min(...all), hi=Math.max(...all), w=300, h=90, n=c.length;
+  const X=i=>(i/(n-1)*w).toFixed(1), Y=v=>(h-4-(v-lo)/((hi-lo)||1)*(h-8)).toFixed(1);
+  const path=a=>a.map((v,i)=>v==null?"":`${X(i)},${Y(v)}`).filter(Boolean).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Weekly price, last 3 years, with 30-week average">
+    <polyline points="${path(ma)}" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <polyline points="${path(c)}" fill="none" stroke="var(--brand2)" stroke-width="1.8"/></svg>
+    <div class="note" style="margin-top:2px">Weekly, 3 years · <span style="color:var(--brand2)">━</span> price · <span style="color:var(--accent)">╍</span> 30-week average</div>`;
+}
+function flowCard(x, weeks){
+  const qd = x.quad ? `<em class="qd ${x.quad}" title="Long-term relative strength vs all stocks">${x.quad}</em>` : "";
+  return `<article class="card">
+    <div class="row1"><div class="sym"><b>${esc(x.sector)}</b>${qd}<span>${x.n} stocks · ${x.share}% of turnover</span></div>
+      <div class="px"><span class="big ${updn(x.net["1m"])}">${crs(x.net["1m"])}</span><span style="display:block;color:var(--ink3);font-weight:500">net flow, 1 month</span></div></div>
+    <span class="pill${flowPill(x.label)}">${esc(x.label)}</span>
+    ${x.note?`<p class="why">${esc(x.note)}</p>`:""}
+    <div class="lv">${["1w","1m","3m"].map(k=>`<div><small>${{"1w":"1 week","1m":"1 month","3m":"3 months"}[k]}</small><b class="${updn(x.net[k])}">${crs(x.net[k])}</b><small>strength ${pct(x.str[k])}</small></div>`).join("")}</div>
+    <dl><dt>Share of turnover</dt><dd class="${updn(x.share_chg)}">${pct(x.share_chg,0)} vs prior 3 months</dd>
+      <dt>Breadth</dt><dd>${x.breadth==null?"–":x.breadth+"% above 50-DMA"}</dd>
+      <dt>1-month return</dt><dd class="${updn(x.ret1m)}">${pct(x.ret1m)} (median stock)</dd></dl>
+    ${bars(x.weekly||[], weeks)}
+    <div class="note" style="margin-top:2px">Net flow per week, last 12 weeks</div>
+  </article>`;
+}
+function rotationMap(etfs){
+  const pts = etfs.filter(e=>e.rs!=null&&e.rs_mom!=null);
+  if(!pts.length) return "";
+  const xs=pts.flatMap(e=>[e.rs,...(e.tail||[]).map(t=>t[0])]), ys=pts.flatMap(e=>[e.rs_mom,...(e.tail||[]).map(t=>t[1])]);
+  const mx=Math.max(5,...xs.map(Math.abs))*1.15, my=Math.max(3,...ys.map(Math.abs))*1.15, W=320, H=240;
+  const X=v=>(W/2+v/mx*(W/2-8)).toFixed(1), Y=v=>(H/2-v/my*(H/2-8)).toFixed(1);
+  const q=(t,x,y,a,c)=>`<text x="${x}" y="${y}" text-anchor="${a}" font-size="11" font-weight="700" fill="var(--${c})" opacity=".8">${t}</text>`;
+  const dots = pts.map(e=>{const col={Leading:"up",Weakening:"warn",Lagging:"down",Improving:"brand2"}[e.quad]||"ink2";
+    const tail=(e.tail||[]).filter(t=>t[0]!=null&&t[1]!=null).map(t=>`${X(t[0])},${Y(t[1])}`).join(" ");
+    return `${tail?`<polyline points="${tail} ${X(e.rs)},${Y(e.rs_mom)}" fill="none" stroke="var(--${col})" stroke-width="1" opacity=".45"/>`:""}
+      <circle cx="${X(e.rs)}" cy="${Y(e.rs_mom)}" r="4" fill="var(--${col})"><title>${e.name}: RS ${e.rs}, momentum ${e.rs_mom}</title></circle>
+      <text x="${+X(e.rs)+6}" y="${+Y(e.rs_mom)+3.5}" font-size="10" fill="var(--ink)">${esc(e.name.split(" (")[0].replace("Financial Services ex-Bank","Fin ex-Bank"))}</text>`;}).join("");
+  return `<article class="card"><b>Rotation map</b><p class="why" style="margin-top:2px">Sectors usually move clockwise: Improving → Leading → Weakening → Lagging. Faint lines show the last 6 weeks.</p>
+    <svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Sector rotation map">
+    <rect x="${W/2}" y="0" width="${W/2}" height="${H/2}" fill="var(--up)" opacity=".06"/><rect x="0" y="${H/2}" width="${W/2}" height="${H/2}" fill="var(--down)" opacity=".06"/>
+    <line x1="${W/2}" x2="${W/2}" y1="0" y2="${H}" stroke="var(--line)"/><line x1="0" x2="${W}" y1="${H/2}" y2="${H/2}" stroke="var(--line)"/>
+    ${q("IMPROVING",6,14,"start","brand2")}${q("LEADING",W-6,14,"end","up")}${q("LAGGING",6,H-6,"start","down")}${q("WEAKENING",W-6,H-6,"end","warn")}
+    ${dots}</svg>
+    <div class="note">Across: relative strength vs Nifty 50 (vs its 52-week average). Up/down: change over the last 8 weeks.</div></article>`;
+}
+function etfCard(x){
+  const r=x.ret||{};
+  return `<article class="card">
+    <div class="row1"><div class="sym"><b>${esc(x.name)}</b><em class="qd ${x.quad}">${x.quad}</em><span>${esc(x.sym)} · score ${x.score}/100</span></div>
+      <div class="px"><b>${money(x.price)}</b>${x.chg==null?"":`<span class="${updn(x.chg)}">${pct(x.chg,2)}</span>`}</div></div>
+    <span class="pill${etfPill(x.verdict)}">${esc(x.verdict)}</span>
+    <p class="why">${esc(x.why)}</p>
+    <dl><dt>Stage</dt><dd>${esc(x.stage)}${x.weeks_above?` · ${x.weeks_above} weeks above 30-wk avg`:""}</dd>
+      <dt>Vs Nifty 50</dt><dd class="${updn(x.rs)}">RS ${pct(x.rs)} · ${x.rs_mom>=0?"improving":"slipping"} (${pct(x.rs_mom)} in 8 wks)</dd>
+      <dt>Monthly trend</dt><dd>${x.monthly_ok?"Above a rising 10-month average":"Not confirmed"}</dd>
+      <dt>Structure</dt><dd>${x.hh&&x.hl?"Higher highs and higher lows":x.hl?"Higher lows":x.hh?"Higher highs":"No higher highs / lows"}</dd>
+      <dt>From 52w high</dt><dd>${pct(x.from_hi)}</dd>
+      <dt>Returns</dt><dd>3m ${pct(r["3m"])} · 6m ${pct(r["6m"])} · 1y ${pct(r["1y"])}${r["3y"]!=null?" · 3y "+pct(r["3y"]):""}</dd></dl>
+    ${line(x.chart)}
+    ${x.note?`<p class="note">${esc(x.note)}</p>`:""}
+    <div class="links"><a href="https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(x.sym)}&interval=W" target="_blank" rel="noopener">Weekly chart</a></div>
+  </article>`;
+}
+function renderSectors(){
+  const S = (D && D.sectors) || {};
+  const seg = `<div class="seg" role="tablist">${[["flow","Money flow"],["etf","Sector ETF charts"]].map(([k,t])=>`<button role="tab" aria-selected="${st.sv===k}" data-sv="${k}">${t}</button>`).join("")}</div>`;
+  if(st.sv==="etf"){
+    const e = S.etfs || [];
+    if(!e.length) return seg + `<div class="empty"><b>No ETF data yet</b>Sector ETF charts appear after the next daily update.</div>`;
+    const pick = v => e.filter(x=>x.verdict===v).map(x=>x.name.split(" (")[0]).join(", ");
+    const sum = [["Strong uptrend",pick("Strong uptrend")],["Reviving",pick("Reviving")],["Downtrend",pick("Downtrend")]].filter(([,v])=>v)
+      .map(([k,v])=>`<b>${k}:</b> ${esc(v)}`).join("<br>");
+    return seg + (sum?`<p class="sum">${sum}</p>`:"") + rotationMap(e) + e.map(etfCard).join("");
+  }
+  const F = S.flow || {}, groups = ["All","Large","Mid","Small","Micro"].filter(g=>F[g]);
+  if(!groups.length) return seg + `<div class="empty"><b>No money-flow data yet</b>It appears after the next daily update.</div>`;
+  const g = groups.includes(st.fg) ? st.fg : groups[0], rows = F[g].sectors || [];
+  const ins = rows.filter(x=>/inflow/i.test(x.label)).map(x=>x.sector), outs = rows.filter(x=>/outflow/i.test(x.label)).map(x=>x.sector).reverse();
+  return seg + `<div class="mini">${groups.map(k=>`<button aria-selected="${k===g}" data-fg="${k}">${k==="All"?"All stocks":k+" caps"}</button>`).join("")}</div>
+    <p class="sum">${ins.length?`<b>Money moving in:</b> ${esc(ins.join(", "))}<br>`:""}${outs.length?`<b>Money moving out:</b> ${esc(outs.join(", "))}<br>`:""}
+    <span style="font-size:12px;color:var(--ink3)">${F[g].stocks} stocks · estimated from price and volume, not actual FII/DII data</span></p>`
+    + rows.map(x=>flowCard(x, F.weeks)).join("");
+}
+
 function render(){
   renderTabs();
   const s = SCANS.find(z=>z.k===st.scan) || SCANS[0];
   let items = list(st.cap, s.k);
   const q = st.q.trim().toLowerCase();
   if(q) items = items.filter(x => (x.sym+" "+x.name).toLowerCase().includes(q));
-  const head = `<div class="head"><div style="flex:1"><h2>${s.t} · ${st.cap} caps</h2><p>${esc(s.d)}</p></div>
+  const head = `<div class="head"><div style="flex:1"><h2>${s.t}${s.k==="sectors"?"":` · ${st.cap} caps`}</h2><p>${esc(s.d)}</p></div>
     <button class="iconbtn" data-info="${s.k}" aria-label="How this scan works">i</button></div>
-    <input class="search" type="search" placeholder="Search symbol or company" value="${esc(st.q)}" id="q">`;
+    ${s.k==="sectors"?"":`<input class="search" type="search" placeholder="Search symbol or company" value="${esc(st.q)}" id="q">`}`;
   let body;
   const banner = D && D.sample ? `<div class="card" style="background:var(--warnBg);border-color:transparent;color:var(--warn);font-size:13px">Sample data from your laptop scans (small and micro caps only). All four groups fill in after the first daily update.</div>` : "";
-  if(!D) body = `<div class="empty"><b>No scan data yet</b>The first daily update has not run. Check back after 5 PM IST.</div>`;
+  if(D && s.k==="sectors") body = renderSectors();
+  else if(!D) body = `<div class="empty"><b>No scan data yet</b>The first daily update has not run. Check back after 5 PM IST.</div>`;
   else if(!items.length) body = `<div class="empty"><b>Nothing today</b>${q?"No match for your search.":"No "+st.cap.toLowerCase()+"-cap stock passed this scan and the concall filter."}</div>`;
   else body = s.k==="concalls" ? items.map(concallCard).join("") : items.map(card).join("");
   $("#main").innerHTML = banner + head + body;
   const on = document.querySelector(".chips [aria-selected=true]");
   if(on){ const c=$("#chips"); const l=on.offsetLeft-16, r=l+on.offsetWidth+32; if(l<c.scrollLeft||r>c.scrollLeft+c.clientWidth) c.scrollLeft=l; }
   const qi = $("#q"); if(q && document.activeElement!==qi){}
-  qi.addEventListener("input", e => { st.q = e.target.value; const pos=e.target.selectionStart; render(); const n=$("#q"); n.focus(); n.setSelectionRange(pos,pos); });
+  if(qi) qi.addEventListener("input", e => { st.q = e.target.value; const pos=e.target.selectionStart; render(); const n=$("#q"); n.focus(); n.setSelectionRange(pos,pos); });
 }
 
 document.addEventListener("click", e => {
   const c = e.target.closest("[data-cap]"); if(c){ st.cap=c.dataset.cap; set("cap",st.cap); render(); return; }
   const s = e.target.closest("[data-scan]"); if(s){ st.scan=s.dataset.scan; set("scan",st.scan); st.q=""; render(); window.scrollTo({top:0}); return; }
+  const v = e.target.closest("[data-sv]"); if(v){ st.sv=v.dataset.sv; set("sv",st.sv); render(); return; }
+  const g = e.target.closest("[data-fg]"); if(g){ st.fg=g.dataset.fg; set("fg",st.fg); render(); return; }
   const m = e.target.closest("[data-more]"); if(m){ const el=document.getElementById(m.dataset.more); el.hidden=!el.hidden; m.textContent = el.hidden ? m.textContent.replace("Hide","Key points") : m.textContent.replace("Key points","Hide"); return; }
   const i = e.target.closest("[data-info]"); if(i){ const s=SCANS.find(z=>z.k===i.dataset.info);
-    $("#infoT").textContent = s.t; $("#infoB").innerHTML = `<p>${esc(s.d)}</p><ul>${s.rules.map(r=>`<li>${esc(r)}</li>`).join("")}</ul><p>Every list keeps only companies that hold concalls regularly (4+ calls in 24 months, latest within 7 months).</p>`;
+    $("#infoT").textContent = s.t; $("#infoB").innerHTML = `<p>${esc(s.d)}</p><ul>${s.rules.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>${s.k==="sectors"?"":"<p>Every list keeps only companies that hold concalls regularly (4+ calls in 24 months, latest within 7 months).</p>"}`;
     $("#info").showModal(); }
 });
 $("#refresh").onclick = () => location.reload();

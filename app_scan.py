@@ -41,6 +41,7 @@ import base_breakout_scanner as bb
 import stage2_scanner as s2
 import stage2_maturity as sm
 import concall_points as cp
+import sector_rotation as sr
 
 HERE = Path(__file__).resolve().parent
 DOCS = HERE / "docs" / "data"
@@ -318,9 +319,9 @@ def stage2_all(prices: dict) -> dict:
     return out
 
 
-def finish_stage2(r: dict, comp: dict, price: float) -> dict:
+def finish_stage2(r: dict, comp: dict, price: float, sector=None) -> dict:
     fpts, fsig, fo = sm.fundamental((comp or {}).get("q") or {}, price, r["_start_price"], r["_start_date"])
-    r.update(fo, _fpts=fpts, _fsig=fsig, _sector=None)
+    r.update(fo, _fpts=fpts, _fsig=fsig, _sector=sector)
     sm.label(r)
     return r
 
@@ -445,8 +446,10 @@ def main(argv=None):
     except Exception:
         listed = {}
 
+    log("Sector rotation ...")
+    sectors, sector_of = sr.run(prices, {s: m["cap"] for s, m in meta.items()})
     for s in early_c | late_c:
-        finish_stage2(st2[s], comp.get(s), float(prices[s]["Close"].iloc[-1]))
+        finish_stage2(st2[s], comp.get(s), float(prices[s]["Close"].iloc[-1]), sector_of.get(s))
     for s in early_c:
         r = st2[s]
         if fresh(r) or r.get("maturity") == "Early stage 2":
@@ -483,7 +486,7 @@ def main(argv=None):
 
     data = {"asof": asof.isoformat(), "generated": now.strftime("%Y-%m-%d %H:%M IST"),
             "universe": {c: int((uni["cap"] == c).sum()) for c in CAPS},
-            "dropped_no_concalls": dropped, "caps": caps}
+            "dropped_no_concalls": dropped, "caps": caps, "sectors": sectors}
     txt = json.dumps(data, ensure_ascii=False, default=clean, separators=(",", ":"))
     (DOCS / "latest.json").write_text(txt, encoding="utf-8")
     (DOCS / "latest.js").write_text("window.SCAN_DATA=" + txt + ";", encoding="utf-8")
