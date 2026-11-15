@@ -161,7 +161,7 @@ const SCANS = [
    rules:["Calls held in the last ~75 days, newest first","Results from the quarterly table; quotes picked automatically from the transcript (guidance, orders, capex, margins)","Companies with irregular concalls are marked"]},
   {k:"sectors", t:"Sector Rotation", d:"Which sectors money is moving into or out of, and which sector ETF charts look bullish on the long-term (weekly / monthly) view.",
    rules:["Money flow: for every stock, turnover (price × volume) counts as buying when the day closes near its high and selling when it closes near its low (Chaikin money flow). Summed by NSE sector for 1 week, 1 month and 3 months.",
-     "Flow strength = net flow ÷ turnover. Inflow ≥ +2%, strong inflow ≥ +6% with the sector's share of market turnover up 10%+ (outflow the same way down).",
+     "Flow strength = net flow ÷ turnover. Labels compare each sector with the whole market, so a broad rally does not turn every sector green: inflow = 1-month strength 4+ points above the market, strong inflow = 8+ points above with the sector's share of turnover up 5%+ (outflow the same way down).",
      "Share of turnover: the sector's share of all trading this month versus the 3 months before — rising means money is rotating in.",
      "Breadth: % of the sector's stocks above their 50-day average. Quadrant: the sector's long-term relative strength versus all stocks (Leading → Weakening → Lagging → Improving).",
      "ETF charts (weekly): 30-week average and its slope (Weinstein stages), 10-month average, Mansfield relative strength versus Nifty 50, higher highs / higher lows, distance from the 52-week high.",
@@ -263,7 +263,8 @@ function flowCard(x, weeks){
     <span class="pill${flowPill(x.label)}">${esc(x.label)}</span>
     ${x.note?`<p class="why">${esc(x.note)}</p>`:""}
     <div class="lv">${["1w","1m","3m"].map(k=>`<div><small>${{"1w":"1 week","1m":"1 month","3m":"3 months"}[k]}</small><b class="${updn(x.net[k])}">${crs(x.net[k])}</b><small>strength ${pct(x.str[k])}</small></div>`).join("")}</div>
-    <dl><dt>Share of turnover</dt><dd class="${updn(x.share_chg)}">${pct(x.share_chg,0)} vs prior 3 months</dd>
+    <dl><dt>Vs market</dt><dd class="${updn(x.rel&&x.rel["1m"])}">${x.rel?pct(x.rel["1m"])+" pts flow strength (1 month)":"–"}</dd>
+      <dt>Share of turnover</dt><dd class="${updn(x.share_chg)}">${pct(x.share_chg,0)} vs prior 3 months</dd>
       <dt>Breadth</dt><dd>${x.breadth==null?"–":x.breadth+"% above 50-DMA"}</dd>
       <dt>1-month return</dt><dd class="${updn(x.ret1m)}">${pct(x.ret1m)} (median stock)</dd></dl>
     ${bars(x.weekly||[], weeks)}
@@ -325,7 +326,7 @@ function renderSectors(){
   const ins = rows.filter(x=>/inflow/i.test(x.label)).map(x=>x.sector), outs = rows.filter(x=>/outflow/i.test(x.label)).map(x=>x.sector).reverse();
   return seg + `<div class="mini">${groups.map(k=>`<button aria-selected="${k===g}" data-fg="${k}">${k==="All"?"All stocks":k+" caps"}</button>`).join("")}</div>
     <p class="sum">${ins.length?`<b>Money moving in:</b> ${esc(ins.join(", "))}<br>`:""}${outs.length?`<b>Money moving out:</b> ${esc(outs.join(", "))}<br>`:""}
-    <span style="font-size:12px;color:var(--ink3)">${F[g].stocks} stocks · estimated from price and volume, not actual FII/DII data</span></p>`
+    ${F[g].market?`<b>Whole market:</b> flow strength ${pct(F[g].market["1w"])} (1 wk) · ${pct(F[g].market["1m"])} (1 mth) · ${pct(F[g].market["3m"])} (3 mths)<br>`:""}<span style="font-size:12px;color:var(--ink3)">${F[g].stocks} stocks · labels are relative to the whole market · estimated from price and volume, not actual FII/DII data</span></p>`
     + rows.map(x=>flowCard(x, F.weeks)).join("");
 }
 

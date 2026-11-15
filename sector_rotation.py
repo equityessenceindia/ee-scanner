@@ -170,6 +170,9 @@ def money_flow(prices: dict, caps: dict, sectors: dict) -> dict:
         if len(members) < 30:
             continue
         tot_now = T[members].iloc[-21:].values.sum()
+        mkt_mf, mkt_t = MF[members].sum(axis=1), T[members].sum(axis=1)
+        mk = {k: (mkt_mf.iloc[-n:].sum() / mkt_t.iloc[-n:].sum() if mkt_t.iloc[-n:].sum() else 0)
+              for k, n in (("1w", 5), ("1m", 21), ("3m", 63))}
         tot_before = T[members].iloc[-84:-21].values.sum()
         rows = []
         for name, idx in sec[members].groupby(sec[members]).groups.items():
@@ -187,42 +190,46 @@ def money_flow(prices: dict, caps: dict, sectors: dict) -> dict:
             share_chg = share_now / share_before - 1 if share_before > 0 else 0
             b = above50[idx].iloc[-1][have50[idx].iloc[-1]]
             weekly = mf.groupby(wk).sum()
-            label, note = flow_label(s1w, s1m, s3m, share_chg)
+            rel = {"1w": s1w - mk["1w"], "1m": s1m - mk["1m"], "3m": s3m - mk["3m"]}
+            label, note = flow_label(rel["1w"], rel["1m"], rel["3m"], share_chg)
             rows.append({
                 "sector": name, "n": len(idx), "label": label, "note": note,
                 "net": {"1w": r2(n1w, 0), "1m": r2(n1m, 0), "3m": r2(n3m, 0)},
                 "str": {"1w": r2(s1w * 100, 1), "1m": r2(s1m * 100, 1), "3m": r2(s3m * 100, 1)},
+                "rel": {k: r2(v * 100, 1) for k, v in rel.items()},
                 "share": r2(share_now * 100, 1), "share_chg": r2(share_chg * 100, 0),
                 "turnover_1m": r2(t1m, 0),
                 "breadth": r2(b.mean() * 100, 0) if len(b) else None,
                 "ret1m": r2(ret1m[idx].median() * 100, 1),
                 "weekly": [r2(weekly.get(w, 0), 0) for w in weeks],
-                "_score": s1m * 100 + 0.5 * s1w * 100 + 0.1 * (share_chg * 100),
+                "_score": rel["1m"] * 100 + 0.5 * rel["1w"] * 100 + 0.1 * (share_chg * 100),
             })
         rows.sort(key=lambda r: -r.pop("_score"))
-        out[g] = {"sectors": rows, "stocks": len(members)}
+        out[g] = {"sectors": rows, "stocks": len(members), "market": {k: r2(v * 100, 1) for k, v in mk.items()}}
     out["weeks"] = [w.end_time.date().isoformat() for w in weeks]
     return out
 
 
-def flow_label(s1w, s1m, s3m, share_chg):
-    if s1m >= 0.06 and share_chg >= 0.10:
+def flow_label(r1w, r1m, r3m, share_chg):
+    """Labels use flow strength RELATIVE to the whole market (all sectors together), so a broad
+    rally or sell-off does not mark every sector as inflow / outflow - only rotation shows."""
+    if r1m >= 0.08 and share_chg >= 0.05:
         lab = "Strong inflow"
-    elif s1m >= 0.02:
+    elif r1m >= 0.04:
         lab = "Inflow"
-    elif s1m <= -0.06 and share_chg <= -0.10:
+    elif r1m <= -0.08 and share_chg <= -0.05:
         lab = "Strong outflow"
-    elif s1m <= -0.02:
+    elif r1m <= -0.04:
         lab = "Outflow"
     else:
-        lab = "Neutral"
-    if s1w >= 0.05 and s3m < 0:
-        note = "Fresh buying this week after 3 months of selling"
-    elif s1w <= -0.05 and s3m > 0:
-        note = "Selling this week after 3 months of buying"
-    elif s1m >= 0.02 and s3m > 0 and share_chg > 0.1:
+        lab = "In line with market"
+    if r1w >= 0.05 and r3m < -0.02:
+        note = "Buying picked up this week after 3 months of lagging the market"
+    elif r1w <= -0.05 and r3m > 0.02:
+        note = "Selling picked up this week after 3 months of leading the market"
+    elif r1m >= 0.04 and r3m > 0 and share_chg > 0.1:
         note = "Steady inflow and a rising share of market turnover"
-    elif s1m <= -0.02 and s3m < 0 and share_chg < -0.1:
+    elif r1m <= -0.04 and r3m < 0 and share_chg < -0.1:
         note = "Steady outflow and a falling share of market turnover"
     elif share_chg >= 0.25:
         note = "Trading activity rising sharply"
@@ -353,7 +360,7 @@ def analyse_chart(d: pd.DataFrame, bench: pd.DataFrame) -> dict | None:
         verdict, why = "Uptrend fading", "Still above the 30-week average but momentum versus Nifty is slipping"
     elif a30 and up_ma:
         verdict, why = "Uptrend", "Above a rising 30-week average"
-    elif not a30 and slope > 0 and mo_ok:
+    elif not a30 and up_ma and mo_ok:
         verdict, why = "Pullback in uptrend", "Dipped below the 30-week average while the long-term trend is still up"
     elif stage.startswith("Stage 4"):
         verdict, why = "Downtrend", "Below a falling 30-week average - no sign of revival yet"
