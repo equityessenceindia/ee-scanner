@@ -114,6 +114,9 @@ blockquote{margin:4px 0 8px;padding:6px 10px;border-left:3px solid var(--accent)
 .sum b{color:var(--ink)}
 svg.spark{display:block;width:100%;height:auto;margin-top:10px}
 .why{font-size:13.5px;margin:6px 0 0;color:var(--ink2)}
+.mem{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.mem a{font-size:12px;font-weight:600;text-decoration:none;color:var(--ink);background:var(--surface2);border-radius:7px;padding:3px 7px}
+.mem a i{font-style:normal;font-weight:500;margin-left:4px}
 footer{font-size:12px;color:var(--ink3);padding:8px 16px 28px;max-width:760px;margin:0 auto}
 dialog{border:0;border-radius:16px;padding:18px;max-width:520px;width:calc(100% - 32px);background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
@@ -176,11 +179,12 @@ const SCANS = [
      "Breadth: % of the sector's stocks above their 50-day average. Quadrant: the sector's long-term relative strength versus all stocks (Leading → Weakening → Lagging → Improving).",
      "ETF charts (weekly): 30-week average and its slope (Weinstein stages), 10-month average, Mansfield relative strength versus Nifty 50, higher highs / higher lows, distance from the 52-week high.",
      "Strong uptrend = above a rising 30-week average for 20+ weeks, monthly trend up, outperforming Nifty, near the 52-week high — likely to continue. Reviving = turning up from a weak phase with improving relative strength.",
+     "Sub-sectors: companies doing the same business (e.g. CDMO, transformers, CNC machines) are combined into one equal-weight chart — each day is the average % move of the companies — and read with the same long-term rules as the ETFs. Baskets are listed in themes.csv in the GitHub repo and can be edited.",
      "An estimate from price and volume — not actual FII / DII / mutual fund flow data."]},
 ];
 const CAPS = ["Large","Mid","Small","Micro"];
 const D = window.SCAN_DATA || null;
-const st = {cap: get("cap") || "Small", scan: get("scan") || "flag", q: "", sv: get("sv") || "flow", fg: get("fg") || "All", iz: get("iz") || "deals"};
+const st = {ts: get("ts") || "All", cap: get("cap") || "Small", scan: get("scan") || "flag", q: "", sv: get("sv") || "flow", fg: get("fg") || "All", iz: get("iz") || "deals"};
 function get(k){try{return localStorage.getItem("ee_"+k)}catch(e){return null}}
 function set(k,v){try{localStorage.setItem("ee_"+k,v)}catch(e){}}
 const $ = s => document.querySelector(s);
@@ -319,9 +323,39 @@ function etfCard(x){
     <div class="links"><a href="https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(x.sym)}&interval=W" target="_blank" rel="noopener">Weekly chart</a></div>
   </article>`;
 }
+function themeCard(x){
+  const r=x.ret||{};
+  const mem = (x.members||[]).map(m=>`<a href="https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(m.sym)}&interval=W" target="_blank" rel="noopener" title="3-month / 1-year return">${esc(m.sym)}<i class="${updn(m.r3m)}">${m.r3m==null?"new":pct(m.r3m,0)}</i></a>`).join("");
+  return `<article class="card">
+    <div class="row1"><div class="sym"><b>${esc(x.name)}</b><em class="qd ${x.quad}">${x.quad}</em><span>${esc(x.sector)} · ${x.n} companies · score ${x.score}/100</span></div>
+      <div class="px"><b class="${updn(r["3m"])}">${pct(r["3m"])}</b><span style="color:var(--ink3);font-weight:500">3 months</span></div></div>
+    <span class="pill${etfPill(x.verdict)}">${esc(x.verdict)}</span>
+    <p class="why">${esc(x.why)}</p>
+    <dl><dt>Stage</dt><dd>${esc(x.stage)}${x.weeks_above?` · ${x.weeks_above} weeks above 30-wk avg`:""}</dd>
+      <dt>Vs Nifty 50</dt><dd class="${updn(x.rs)}">RS ${pct(x.rs)} · ${x.rs_mom>=0?"improving":"slipping"} (${pct(x.rs_mom)} in 8 wks)</dd>
+      <dt>Returns</dt><dd>1m ${pct(x.r1m)} · 6m ${pct(r["6m"])} · 1y ${pct(r["1y"])}${r["3y"]!=null?" · 3y "+pct(r["3y"]):""}</dd>
+      <dt>From 52w high</dt><dd>${pct(x.from_hi)}</dd>
+      <dt>Breadth</dt><dd>${x.breadth==null?"–":x.breadth+"% of companies above their 30-week average"}</dd></dl>
+    ${line(x.chart).replace("Weekly, 3 years","Combined chart (equal weight), weekly, 3 years")}
+    <div class="mem">${mem}</div>
+    <div class="note" style="margin-top:4px">3-month return of each company · tap for its weekly chart</div>
+  </article>`;
+}
+function renderThemes(T){
+  if(!T.length) return `<div class="empty"><b>No sub-sector data yet</b>It appears after the next daily update.</div>`;
+  const secs = ["All", ...new Set(T.map(t=>t.sector))];
+  const g = secs.includes(st.ts) ? st.ts : "All", rows = g==="All" ? T : T.filter(t=>t.sector===g);
+  const pick = v => rows.filter(x=>x.verdict===v).map(x=>x.name).join(", ");
+  const sum = [["Strong uptrend",pick("Strong uptrend")],["Reviving",pick("Reviving")],["Downtrend",pick("Downtrend")]].filter(([,v])=>v)
+    .map(([k,v])=>`<b>${k}:</b> ${esc(v)}`).join("<br>");
+  return `<div class="mini">${secs.map(k=>`<button aria-selected="${k===g}" data-ts="${esc(k)}">${esc(k)}</button>`).join("")}</div>`
+    + (sum?`<p class="sum">${sum}</p>`:"") + rows.map(themeCard).join("");
+}
+
 function renderSectors(){
   const S = (D && D.sectors) || {};
-  const seg = `<div class="seg" role="tablist">${[["flow","Money flow"],["etf","Sector ETF charts"]].map(([k,t])=>`<button role="tab" aria-selected="${st.sv===k}" data-sv="${k}">${t}</button>`).join("")}</div>`;
+  const seg = `<div class="seg" role="tablist">${[["flow","Money flow"],["etf","ETF charts"],["sub","Sub-sectors"]].map(([k,t])=>`<button role="tab" aria-selected="${st.sv===k}" data-sv="${k}">${t}</button>`).join("")}</div>`;
+  if(st.sv==="sub") return seg + renderThemes(S.themes || []);
   if(st.sv==="etf"){
     const e = S.etfs || [];
     if(!e.length) return seg + `<div class="empty"><b>No ETF data yet</b>Sector ETF charts appear after the next daily update.</div>`;
@@ -381,6 +415,7 @@ document.addEventListener("click", e => {
   const c = e.target.closest("[data-cap]"); if(c){ st.cap=c.dataset.cap; set("cap",st.cap); render(); return; }
   const s = e.target.closest("[data-scan]"); if(s){ st.scan=s.dataset.scan; set("scan",st.scan); st.q=""; render(); window.scrollTo({top:0}); return; }
   const v = e.target.closest("[data-sv]"); if(v){ st.sv=v.dataset.sv; set("sv",st.sv); render(); return; }
+  const ts = e.target.closest("[data-ts]"); if(ts){ st.ts=ts.dataset.ts; set("ts",st.ts); render(); return; }
   const z = e.target.closest("[data-iz]"); if(z){ st.iz=z.dataset.iz; set("iz",st.iz); render(); return; }
   const g = e.target.closest("[data-fg]"); if(g){ st.fg=g.dataset.fg; set("fg",st.fg); render(); return; }
   const m = e.target.closest("[data-more]"); if(m){ const el=document.getElementById(m.dataset.more); el.hidden=!el.hidden; m.textContent = el.hidden ? m.textContent.replace("Hide","Key points") : m.textContent.replace("Key points","Hide"); return; }

@@ -388,7 +388,7 @@ def analyse_chart(d: pd.DataFrame, bench: pd.DataFrame) -> dict | None:
     }
 
 
-def etf_view() -> list:
+def etf_view() -> tuple[list, pd.DataFrame | None]:
     etf_t = [e[0] + ".NS" for e in ETFS] + [BENCH[0] + ".NS"]
     idx_t = [e[2] for e in ETFS if e[2]] + [BENCH[1]]
     data = download(etf_t)
@@ -398,7 +398,7 @@ def etf_view() -> list:
     if bench is None or len(bench) < 2000:
         bench = idx.get(BENCH[1], bench)
     if bench is None:
-        return []
+        return [], None
     rows = []
     for sym, name, ix in ETFS:
         d = data.get(sym + ".NS")
@@ -423,6 +423,57 @@ def etf_view() -> list:
     order = {"Strong uptrend": 0, "Reviving": 1, "Uptrend": 2, "Pullback in uptrend": 3,
              "Uptrend fading": 4, "Basing": 5, "Topping": 6, "Downtrend": 7}
     rows.sort(key=lambda r: (order.get(r["verdict"], 9), -r["score"]))
+    return rows, bench
+
+
+VERDICT_ORDER = {"Strong uptrend": 0, "Reviving": 1, "Uptrend": 2, "Pullback in uptrend": 3,
+                 "Uptrend fading": 4, "Basing": 5, "Topping": 6, "Downtrend": 7}
+THEMES_FILE = HERE / "themes.csv"
+
+
+def theme_view(prices: dict, bench: pd.DataFrame | None) -> list:
+    """Sub-sector baskets from themes.csv: an equal-weight combined chart of the member stocks
+    (each day = average % move of the members trading that day, rebased to 100), read with the same
+    long-term rules as the sector ETFs."""
+    if bench is None or not THEMES_FILE.exists():
+        return []
+    t = pd.read_csv(THEMES_FILE)
+    rows = []
+    for _, th in t.iterrows():
+        syms = [x for x in str(th["symbols"]).split() if x in prices]
+        if len(syms) < 2:
+            continue
+        C = pd.DataFrame({x: prices[x]["Close"] for x in syms}).sort_index()
+        C = C[C.index.dayofweek < 5].iloc[-1600:]
+        R = C.pct_change(fill_method=None).clip(-0.25, 0.25)
+        cnt = R.notna().sum(axis=1)
+        ix = (1 + R.mean(axis=1).where(cnt >= 1, 0).fillna(0)).cumprod() * 100
+        ix = ix[ix.index >= C.dropna(how="all").index[0]]
+        d = pd.DataFrame({"Open": ix, "High": ix, "Low": ix, "Close": ix, "Volume": 0.0})
+        try:
+            r = analyse_chart(d, bench)
+        except Exception as e:
+            log(f"  theme {th['subsector']}: {e}")
+            continue
+        if not r:
+            continue
+        mem = []
+        for x in syms:
+            c = prices[x]["Close"].dropna()
+            ma = c.rolling(150, min_periods=60).mean()
+            mem.append({"sym": x,
+                        "r3m": r2((c.iloc[-1] / c.iloc[-64] - 1) * 100, 1) if len(c) > 64 else None,
+                        "r1y": r2((c.iloc[-1] / c.iloc[-253] - 1) * 100, 1) if len(c) > 253 else None,
+                        "up": bool(c.iloc[-1] > ma.iloc[-1]) if np.isfinite(ma.iloc[-1]) else None})
+        mem.sort(key=lambda m: -(m["r3m"] if m["r3m"] is not None else -999))
+        known = [m["up"] for m in mem if m["up"] is not None]
+        r.update(name=th["subsector"], sector=th["sector"], members=mem, n=len(syms),
+                 breadth=r2(100 * sum(known) / len(known), 0) if known else None,
+                 r1m=r2((ix.iloc[-1] / ix.iloc[-22] - 1) * 100, 1) if len(ix) > 22 else None)
+        r.pop("tail", None)
+        rows.append(r)
+    rows.sort(key=lambda r: (VERDICT_ORDER.get(r["verdict"], 9), -r["score"]))
+    log(f"Sub-sector baskets: {len(rows)}")
     return rows
 
 
@@ -441,8 +492,13 @@ def run(prices: dict, caps: dict) -> tuple[dict, dict]:
         stock_view = {s: (sec, quads.get(sec)) for s, sec in sectors.items() if quads.get(sec)}
     except Exception as e:
         log(f"Money flow failed: {e}")
+    bench = None
     try:
-        out["etfs"] = etf_view()
+        out["etfs"], bench = etf_view()
     except Exception as e:
         log(f"Sector ETFs failed: {e}")
+    try:
+        out["themes"] = theme_view(prices, bench)
+    except Exception as e:
+        log(f"Sub-sector baskets failed: {e}")
     return out, stock_view
