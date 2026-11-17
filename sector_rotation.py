@@ -352,12 +352,12 @@ def analyse_chart(d: pd.DataFrame, bench: pd.DataFrame) -> dict | None:
 
     was_weak = (np.isfinite(slope13) and slope13 < 0) or from_hi_13 <= -15 or streak <= 16
     rs_up = np.isfinite(my) and my > 0
-    if a30 and up_ma and streak >= 20 and mo_ok and mx > 0 and from_hi > -12 and (my > -3 or not np.isfinite(my)):
+    if a30 and up_ma and streak >= 20 and mo_ok and (from_hi > -5 or (mx > 0 and from_hi > -12 and (my > -3 or not np.isfinite(my)))):
         verdict, why = "Strong uptrend", "Long-term trend and relative strength both up - likely to continue"
     elif a30 and was_weak and (ma10.iloc[-1] > ma30.iloc[-1] or brk26) and rs_up and (hh or hl or brk26):
         verdict, why = "Reviving", "Turning up from a weak phase with improving relative strength"
-    elif a30 and up_ma and (not rs_up or not a10) and mx > 0:
-        verdict, why = "Uptrend fading", "Still above the 30-week average but momentum versus Nifty is slipping"
+    elif a30 and up_ma and (not a10 or (not rs_up and from_hi <= -5)):
+        verdict, why = "Uptrend fading", "Still above the 30-week average but slipping below the 10-week average or lagging Nifty"
     elif a30 and up_ma:
         verdict, why = "Uptrend", "Above a rising 30-week average"
     elif not a30 and up_ma and mo_ok:
