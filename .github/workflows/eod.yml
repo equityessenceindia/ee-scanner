@@ -32,5 +32,6 @@ jobs:
           git config user.email "eod-scan-bot@users.noreply.github.com"
           git add docs/data cache/app_screener.json cache/transcript_points.json caps_fallback.csv
           git add cache/sectors.csv 2>/dev/null || true
+          git add cache/listing_day_deals.json 2>/dev/null || true
           git commit -m "EOD scan $(date -u +%Y-%m-%d)" || echo "nothing new"
           git push

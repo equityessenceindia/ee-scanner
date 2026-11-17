@@ -99,7 +99,7 @@ blockquote{margin:4px 0 8px;padding:6px 10px;border-left:3px solid var(--accent)
 .tag{font-size:11px;font-weight:700;color:var(--warn);background:var(--warnBg);border-radius:6px;padding:1px 6px}
 /* sector rotation */
 .seg{display:flex;gap:4px;padding:4px;background:var(--surface2);border-radius:12px;margin-bottom:10px}
-.seg button{flex:1;border:0;background:transparent;padding:8px 4px;border-radius:9px;font-weight:600;font-size:13.5px;color:var(--ink2);cursor:pointer}
+.seg button{flex:1;border:0;background:transparent;padding:8px 3px;line-height:1.2;border-radius:9px;font-weight:600;font-size:13.5px;color:var(--ink2);cursor:pointer}
 .seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
 .mini{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .mini button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--ink2);cursor:pointer}
@@ -157,6 +157,12 @@ const SCANS = [
    rules:["Weekly: closes inside a 40% range for 26+ weeks (up to 5 years). Monthly: inside a 60% range for 12+ months (up to 8 years)","Base is flat (not a slow trend) and its top was tested 2+ times","Near breakout (within 5% of the top), breaking out now, or a confirmed breakout in the last 4 weeks / 2 months that still holds","Unusual volume INSIDE the base on an up bar: a week ≥3x its 20-week average, a month ≥2.5x its 12-month average, or a day ≥5x its 50-day average"]},
   {k:"ipo", t:"IPO Breakout", d:"Listed in the last 3 years and coming out of its first consolidation (IPO base) after listing, on good volume.",
    rules:["Listed on NSE within the last 3 years (listing week ignored)","IPO base: 6+ weeks of weekly closes inside a 45% range, flat, top tested 2+ times","Near breakout (within 5%), breaking out this week, or a confirmed breakout in the last 4 weeks that still holds (max 20% extended)","Good volume: a week in the last 4 ≥2.5x the base's average week, or a day in the last 20 sessions ≥3x its 50-day average"]},
+  {k:"ipozone", t:"IPO Zone", d:"Companies listed on NSE in the last 5 years (market cap ₹500 cr+), in four views: listing-day buyers, institutional holding, volume breakouts and all-time highs.",
+   rules:["Listing-day buyers: NSE bulk and block deals on the listing day, BUY side only. A client that also sold on the same day is treated as intraday and left out. Sorted by value bought; 'vs buyers' avg' compares today's price with their average buying price.",
+     "FII + DII: latest quarterly shareholding from Screener, FII + DII 15% or more, with the change over the last quarter and since the first quarter after listing.",
+     "Volume breakout: a day in the last 5 sessions with volume 3x+ its 50-day average, closing up at a new 20-day closing high (listing days ignored).",
+     "All-time high: a new high since listing made in the last 5 sessions (listed 3+ months). 'First in X months' = how long the previous high stood.",
+     "Concall status is shown but not used as a filter here, since many new listings have held few calls."]},
   {k:"s2early", t:"Stage 2 Early", d:"Minervini Trend Template just turned true, or the stage 2 advance is still young (first base, few warning signs).",
    rules:["All 8 Trend Template criteria (price above 50/150/200-DMA, 200-DMA rising, 30% above 52w low, within 25% of 52w high, RS ≥70)","Started within 30 sessions, or rated Early stage 2 by the maturity model","VCP and pivot shown when present"]},
   {k:"s2late", t:"Stage 2 → 3", d:"Advance is late or topping (Minervini/Weinstein maturity signals) and volume is drying up.",
@@ -174,7 +180,7 @@ const SCANS = [
 ];
 const CAPS = ["Large","Mid","Small","Micro"];
 const D = window.SCAN_DATA || null;
-const st = {cap: get("cap") || "Small", scan: get("scan") || "flag", q: "", sv: get("sv") || "flow", fg: get("fg") || "All"};
+const st = {cap: get("cap") || "Small", scan: get("scan") || "flag", q: "", sv: get("sv") || "flow", fg: get("fg") || "All", iz: get("iz") || "deals"};
 function get(k){try{return localStorage.getItem("ee_"+k)}catch(e){return null}}
 function set(k,v){try{localStorage.setItem("ee_"+k,v)}catch(e){}}
 const $ = s => document.querySelector(s);
@@ -186,12 +192,12 @@ function list(cap, scan){ return (D && D.caps && D.caps[cap] && D.caps[cap][scan
 
 function renderTabs(){
   $("#caps").innerHTML = CAPS.map(c => {
-    const n = SCANS.filter(s=>s.k!=="concalls"&&s.k!=="sectors").reduce((a,s)=>a+list(c,s.k).length,0);
+    const n = SCANS.filter(s=>!["concalls","sectors","ipozone"].includes(s.k)).reduce((a,s)=>a+list(c,s.k).length,0);
     return `<button role="tab" aria-selected="${c===st.cap}" data-cap="${c}">${c}<small>${n} setups</small></button>`;
   }).join("");
   $("#chips").innerHTML = SCANS.map(s =>
-    `<button role="tab" aria-selected="${s.k===st.scan}" data-scan="${s.k}">${s.t}${s.k==="sectors"?"":`<span class="n">${list(st.cap,s.k).length}</span>`}</button>`).join("");
-  $("#caps").style.display = st.scan==="sectors" ? "none" : "";
+    `<button role="tab" aria-selected="${s.k===st.scan}" data-scan="${s.k}">${s.t}${["sectors","ipozone"].includes(s.k)?"":`<span class="n">${list(st.cap,s.k).length}</span>`}</button>`).join("");
+  $("#caps").style.display = ["sectors","ipozone"].includes(st.scan) ? "none" : "";
 }
 
 function card(x){
@@ -334,18 +340,33 @@ function renderSectors(){
     + rows.map(x=>flowCard(x, F.weeks)).join("");
 }
 
+// ---------------------------------------------------------------- IPO zone
+function renderIpoZone(){
+  const Z = (D && D.ipo_zone) || {}, S = Z.sections || {};
+  const tabs = [["deals","Listing buyers"],["inst","FII + DII"],["vol","Volume"],["ath","All-time high"]];
+  const k = tabs.some(t=>t[0]===st.iz) ? st.iz : "deals";
+  const seg = `<div class="seg" role="tablist">${tabs.map(([t,l])=>`<button role="tab" aria-selected="${k===t}" data-iz="${t}">${l} <span style="opacity:.6">${(S[t]||[]).length}</span></button>`).join("")}</div>`;
+  if(!Z.sections) return seg + `<div class="empty"><b>No IPO data yet</b>It appears after the next daily update.</div>`;
+  const all = S[k] || [], groups = ["All","Large","Mid","Small","Micro"].filter(g=>g==="All"||all.some(x=>x.cap===g));
+  const g = groups.includes(st.fg) ? st.fg : "All", rows = g==="All" ? all : all.filter(x=>x.cap===g);
+  const mini = `<div class="mini">${groups.map(c=>`<button aria-selected="${c===g}" data-fg="${c}">${c==="All"?"All":c+" caps"} ${c==="All"?all.length:all.filter(x=>x.cap===c).length}</button>`).join("")}</div>`;
+  const note = `<p class="sum">${Z.n} companies listed in the last 5 years.${k==="deals"&&Z.note?" "+esc(Z.note):""}</p>`;
+  return seg + mini + note + (rows.length ? rows.map(card).join("") : `<div class="empty"><b>Nothing here today</b>No stock in this group meets the rule.</div>`);
+}
+
 function render(){
   renderTabs();
   const s = SCANS.find(z=>z.k===st.scan) || SCANS[0];
   let items = list(st.cap, s.k);
   const q = st.q.trim().toLowerCase();
   if(q) items = items.filter(x => (x.sym+" "+x.name).toLowerCase().includes(q));
-  const head = `<div class="head"><div style="flex:1"><h2>${s.t}${s.k==="sectors"?"":` · ${st.cap} caps`}</h2><p>${esc(s.d)}</p></div>
+  const head = `<div class="head"><div style="flex:1"><h2>${s.t}${["sectors","ipozone"].includes(s.k)?"":` · ${st.cap} caps`}</h2><p>${esc(s.d)}</p></div>
     <button class="iconbtn" data-info="${s.k}" aria-label="How this scan works">i</button></div>
-    ${s.k==="sectors"?"":`<input class="search" type="search" placeholder="Search symbol or company" value="${esc(st.q)}" id="q">`}`;
+    ${["sectors","ipozone"].includes(s.k)?"":`<input class="search" type="search" placeholder="Search symbol or company" value="${esc(st.q)}" id="q">`}`;
   let body;
   const banner = D && D.sample ? `<div class="card" style="background:var(--warnBg);border-color:transparent;color:var(--warn);font-size:13px">Sample data from your laptop scans (small and micro caps only). All four groups fill in after the first daily update.</div>` : "";
   if(D && s.k==="sectors") body = renderSectors();
+  else if(D && s.k==="ipozone") body = renderIpoZone();
   else if(!D) body = `<div class="empty"><b>No scan data yet</b>The first daily update has not run. Check back after 5 PM IST.</div>`;
   else if(!items.length) body = `<div class="empty"><b>Nothing today</b>${q?"No match for your search.":"No "+st.cap.toLowerCase()+"-cap stock passed this scan and the concall filter."}</div>`;
   else body = s.k==="concalls" ? items.map(concallCard).join("") : items.map(card).join("");
@@ -360,10 +381,11 @@ document.addEventListener("click", e => {
   const c = e.target.closest("[data-cap]"); if(c){ st.cap=c.dataset.cap; set("cap",st.cap); render(); return; }
   const s = e.target.closest("[data-scan]"); if(s){ st.scan=s.dataset.scan; set("scan",st.scan); st.q=""; render(); window.scrollTo({top:0}); return; }
   const v = e.target.closest("[data-sv]"); if(v){ st.sv=v.dataset.sv; set("sv",st.sv); render(); return; }
+  const z = e.target.closest("[data-iz]"); if(z){ st.iz=z.dataset.iz; set("iz",st.iz); render(); return; }
   const g = e.target.closest("[data-fg]"); if(g){ st.fg=g.dataset.fg; set("fg",st.fg); render(); return; }
   const m = e.target.closest("[data-more]"); if(m){ const el=document.getElementById(m.dataset.more); el.hidden=!el.hidden; m.textContent = el.hidden ? m.textContent.replace("Hide","Key points") : m.textContent.replace("Key points","Hide"); return; }
   const i = e.target.closest("[data-info]"); if(i){ const s=SCANS.find(z=>z.k===i.dataset.info);
-    $("#infoT").textContent = s.t; $("#infoB").innerHTML = `<p>${esc(s.d)}</p><ul>${s.rules.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>${s.k==="sectors"?"":"<p>Every list keeps only companies that hold concalls regularly (4+ calls in 24 months, latest within 7 months).</p>"}`;
+    $("#infoT").textContent = s.t; $("#infoB").innerHTML = `<p>${esc(s.d)}</p><ul>${s.rules.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>${["sectors","ipozone"].includes(s.k)?"":"<p>Every list keeps only companies that hold concalls regularly (4+ calls in 24 months, latest within 7 months).</p>"}`;
     $("#info").showModal(); }
 });
 $("#refresh").onclick = () => location.reload();

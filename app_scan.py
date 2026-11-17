@@ -45,6 +45,7 @@ import stage2_maturity as sm
 import concall_points as cp
 import sector_rotation as sr
 import long_base_scanner as lb
+import ipo_zone as iz
 
 HERE = Path(__file__).resolve().parent
 DOCS = HERE / "docs" / "data"
@@ -185,6 +186,10 @@ def company_pages(symbols: list[str], force: set) -> dict:
                 r["docs"] = r["docs"] or cp.concall_docs(p2)[:6]
         r["q"] = {k: (v[-8:] if isinstance(v, list) else v) for k, v in q.items()}
         fund = ip.parse_fundamentals(page)
+        try:
+            r["shp"] = iz.parse_shareholding(page)
+        except Exception:
+            r["shp"] = {}
         r["pe"] = fund.get("Stock P/E")
         r["mcap"] = fund.get("Market Cap")
         time.sleep(1.2)
@@ -448,6 +453,9 @@ def main(argv=None):
         + f", stage2 candidates {len(early_c)}/{len(late_c)}")
 
     cand = set().union(*[set(v) for v in hits.values()]) | early_c | late_c
+    old = load_json(CACHE / "app_screener.json", {})
+    recent = {s for s, d in prices.items() if (today - d.index[0].date()).days <= iz.YEARS * 365 + 30}
+    cand |= {s for s in recent if "shp" not in old.get(s, {})}          # IPOs need shareholding once
     comp = company_pages(sorted(meta), force=cand)
 
     log("Sector rotation ...")
@@ -463,6 +471,35 @@ def main(argv=None):
         if r.get("maturity") in ("Late stage 2", "Topping - stage 3 risk"):
             hits["s2late"][s] = s2_card(r, False)
 
+    def make_item(s, card, cc):
+        c = comp.get(s, {})
+        snap = cp.results_snapshot(c.get("q") or {})
+        px = float(prices[s]["Close"].iloc[-1])
+        return {
+            "sym": s, "name": meta[s]["name"], "price": round(px, 2),
+            "chg": clean((px / float(prices[s]["Close"].iloc[-2]) - 1) * 100) if len(prices[s]) > 1 else None,
+            "mcap": clean(c.get("mcap")), "pe": clean(c.get("pe")),
+            "status": card["status"], "facts": [[a, b] for a, b in card["facts"] if b],
+            "levels": {k: clean(v) for k, v in card["levels"].items() if clean(v) is not None},
+            "concalls": cc, "quarter": snap.get("quarter", ""), "results": snap.get("lines", [])[:3],
+            "_sort": card["sort"]}
+
+    ipo_zone = {}
+    try:
+        zone, note = iz.build({s: prices[s] for s in recent}, listed, comp, es)
+        ipo_zone = {"n": len(recent), "note": note, "sections": {}}
+        for k, items in zone.items():
+            rows = []
+            for s, card in items.items():
+                it = make_item(s, card, concall_status(comp.get(s), listed, s, today))
+                it["cap"] = meta[s]["cap"]
+                rows.append(it)
+            rows.sort(key=lambda x: x.pop("_sort"))
+            ipo_zone["sections"][k] = rows
+        log("IPO Zone: " + ", ".join(f"{k} {len(v)}" for k, v in ipo_zone["sections"].items()))
+    except Exception as e:
+        log(f"IPO Zone failed: {e}")
+
     caps = {c: {k: [] for k in list(hits) + ["concalls"]} for c in CAPS}
     dropped = {k: 0 for k in hits}
     for key, items in hits.items():
@@ -471,17 +508,7 @@ def main(argv=None):
             if not cc["ok"]:
                 dropped[key] += 1
                 continue
-            c = comp.get(s, {})
-            snap = cp.results_snapshot(c.get("q") or {})
-            px = float(prices[s]["Close"].iloc[-1])
-            caps[meta[s]["cap"]][key].append({
-                "sym": s, "name": meta[s]["name"], "price": round(px, 2),
-                "chg": clean((px / float(prices[s]["Close"].iloc[-2]) - 1) * 100) if len(prices[s]) > 1 else None,
-                "mcap": clean(c.get("mcap")), "pe": clean(c.get("pe")),
-                "status": card["status"], "facts": [[a, b] for a, b in card["facts"] if b],
-                "levels": {k: clean(v) for k, v in card["levels"].items() if clean(v) is not None},
-                "concalls": cc, "quarter": snap.get("quarter", ""), "results": snap.get("lines", [])[:3],
-                "_sort": card["sort"]})
+            caps[meta[s]["cap"]][key].append(make_item(s, card, cc))
     for c in CAPS:
         for key in hits:
             caps[c][key].sort(key=lambda x: x.pop("_sort"))
@@ -490,7 +517,7 @@ def main(argv=None):
 
     data = {"asof": asof.isoformat(), "generated": now.strftime("%Y-%m-%d %H:%M IST"),
             "universe": {c: int((uni["cap"] == c).sum()) for c in CAPS},
-            "dropped_no_concalls": dropped, "caps": caps, "sectors": sectors}
+            "dropped_no_concalls": dropped, "caps": caps, "sectors": sectors, "ipo_zone": ipo_zone}
     txt = json.dumps(data, ensure_ascii=False, default=clean, separators=(",", ":"))
     (DOCS / "latest.json").write_text(txt, encoding="utf-8")
     (DOCS / "latest.js").write_text("window.SCAN_DATA=" + txt + ";", encoding="utf-8")
