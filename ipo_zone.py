@@ -30,7 +30,7 @@ DEALS_FILE = HERE / "cache" / "listing_day_deals.json"     # same format as the 
 YEARS = 5
 INST_MIN = 15.0
 VOL_X = 3.0
-DEALS_PER_RUN = 150
+DEALS_PER_RUN = 500
 
 
 def _num(s):
