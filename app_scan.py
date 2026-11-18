@@ -462,9 +462,9 @@ def main(argv=None):
             fh = ad.full_highs(sorted(hits["ath"]), log)
             for s in list(hits["ath"]):
                 if s in fh:
-                    a = ad.first_ath(prices[s], fh[s])
-                    if a:
-                        hits["ath"][s] = a
+                    ath_card = ad.first_ath(prices[s], fh[s])
+                    if ath_card:
+                        hits["ath"][s] = ath_card
                     else:
                         hits["ath"].pop(s)
             log(f"First ATH: {len(hits['ath'])} confirmed on full history ({len(fh)} checked)")
