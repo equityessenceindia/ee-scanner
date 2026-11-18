@@ -46,6 +46,7 @@ import concall_points as cp
 import sector_rotation as sr
 import long_base_scanner as lb
 import ipo_zone as iz
+import ath_dma as ad
 
 HERE = Path(__file__).resolve().parent
 DOCS = HERE / "docs" / "data"
@@ -432,12 +433,16 @@ def main(argv=None):
         listed = ip.listing_dates()
     except Exception:
         listed = {}
-    hits = {k: {} for k in ("flag", "elliott", "base", "accum", "ipo", "s2early", "s2late")}
+    hits = {k: {} for k in ("flag", "elliott", "base", "accum", "ipo", "ath", "dma", "s2early", "s2late")}
+    recent = {s for s, d in prices.items() if (today - d.index[0].date()).days <= iz.YEARS * 365 + 30}
     for i, (s, d) in enumerate(prices.items(), 1):
         d = d.dropna(subset=["High", "Low", "Close"])
         for key, fn in (("flag", lambda: scan_flag(s, d)), ("elliott", lambda: scan_elliott(s, d)),
                         ("base", lambda: scan_base(s, d, now)), ("accum", lambda: lb.scan_accum(s, d, now)),
-                        ("ipo", lambda: lb.scan_ipo(s, d, now, listed.get(s)))):
+                        ("ipo", lambda: lb.scan_ipo(s, d, now, listed.get(s))),
+                        ("ath", lambda: None if s in recent or (listed.get(s) and (today - listed[s]).days <= iz.YEARS * 365)
+                         else ad.first_ath(d)),
+                        ("dma", lambda: ad.dma_cross(d, (50, 150, 200)))):
             try:
                 r = fn()
                 if r:
@@ -452,9 +457,21 @@ def main(argv=None):
     log("Pattern hits before concall filter: " + ", ".join(f"{k} {len(v)}" for k, v in hits.items())
         + f", stage2 candidates {len(early_c)}/{len(late_c)}")
 
+    if hits["ath"]:                                   # check candidates against full price history
+        try:
+            fh = ad.full_highs(sorted(hits["ath"]), log)
+            for s in list(hits["ath"]):
+                if s in fh:
+                    a = ad.first_ath(prices[s], fh[s])
+                    if a:
+                        hits["ath"][s] = a
+                    else:
+                        hits["ath"].pop(s)
+            log(f"First ATH: {len(hits['ath'])} confirmed on full history ({len(fh)} checked)")
+        except Exception as e:
+            log(f"Full-history ATH check failed: {e}")
     cand = set().union(*[set(v) for v in hits.values()]) | early_c | late_c
     old = load_json(CACHE / "app_screener.json", {})
-    recent = {s for s, d in prices.items() if (today - d.index[0].date()).days <= iz.YEARS * 365 + 30}
     cand |= {s for s in recent if "shp" not in old.get(s, {})}          # IPOs need shareholding once
     comp = company_pages(sorted(meta), force=cand)
 
@@ -482,6 +499,7 @@ def main(argv=None):
             "status": card["status"], "facts": [[a, b] for a, b in card["facts"] if b],
             "levels": {k: clean(v) for k, v in card["levels"].items() if clean(v) is not None},
             "concalls": cc, "quarter": snap.get("quarter", ""), "results": snap.get("lines", [])[:3],
+            **{k: card[k] for k in ("tags", "lockin", "lockin_note") if k in card},
             "_sort": card["sort"]}
 
     ipo_zone = {}

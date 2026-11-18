@@ -9,8 +9,10 @@ inst   FII + DII holding - latest quarter from the Screener shareholding table, 
        with the change over the last quarter and since the first quarter after listing.
 vol    Volume breakout - a day in the last 5 sessions with volume >= 3x its 50-day average,
        closing up and at a new 20-day closing high (listing days ignored).
-ath    All-time high - a new all-time high (since listing) made in the last 5 sessions,
-       listed at least 3 months ago.
+ath    First all-time high - went above its previous high since listing in the last 5 sessions,
+       for the first time after that high had stood for 3+ months (same rule as the main list).
+dma    9 / 21 / 50-DMA cross - fresh close above the average in the last 3 sessions.
+Every IPO Zone card also carries the standard SEBI lock-in expiry dates (anchor, pre-IPO, promoters).
 
 Educational use only - not investment advice.
 """
@@ -24,6 +26,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+import ath_dma as ad
 
 HERE = Path(__file__).resolve().parent
 DEALS_FILE = HERE / "cache" / "listing_day_deals.json"     # same format as the laptop ipo_flag_scanner cache
@@ -173,7 +177,7 @@ def build(prices: dict, listed: dict, comp: dict, es) -> tuple[dict, str]:
         if (today - lst).days <= YEARS * 365 and (today - first).days <= YEARS * 365 + 30:
             ipos[s] = (lst, d)
     print(f"IPO Zone: {len(ipos)} stocks listed in the last {YEARS} years", flush=True)
-    out = {k: {} for k in ("deals", "inst", "vol", "ath")}
+    out = {k: {} for k in ("deals", "inst", "vol", "ath", "dma")}
     base_fact = lambda lst, d: ["Listed", f"{_fmt_date(lst)} · {(d['Close'].iloc[-1] / d['Open'].iloc[0] - 1) * 100:+.0f}% from listing-day open"]
 
     # 1. listing-day buyers
@@ -249,17 +253,19 @@ def build(prices: dict, listed: dict, comp: dict, es) -> tuple[dict, str]:
                           ["Other heavy days (5 sessions)", ", ".join(f"{_fmt_date(x.date())} {y:.1f}x" for x, y in sig.items() if x != day)]],
                 "levels": {"Breakout day low": round(float(d["Low"].iloc[k]), 2), "20-day high before": round(float(hi20.iloc[k]), 2)},
                 "sort": -sig.max()}
-        if (today - lst).days >= 90 and len(d) > 60:
-            prior = h.iloc[:-5].max()
-            if h.iloc[-5:].max() > prior:
-                last_ath = h.iloc[:-5].idxmax().date()
-                gap = (d.index[-6].date() - last_ath).days / 30.44
-                out["ath"][s] = {
-                    "status": "New all-time high" + (f" - first in {gap:.0f} months" if gap >= 3 else ""),
-                    "facts": [base_fact(lst, d),
-                              ["All-time high", f"₹{h.iloc[-5:].max():,.2f} ({_fmt_date(h.iloc[-5:].idxmax().date())})"],
-                              ["Previous high", f"₹{prior:,.2f} ({_fmt_date(last_ath)})"],
-                              ["Volume vs 50-day avg", f"{float(rv.iloc[-5:].max()):.1f}x (best of last 5 days)" if len(rv) and np.isfinite(rv.iloc[-5:].max()) else ""]],
-                    "levels": {"Previous ATH": round(float(prior), 2)},
-                    "sort": -gap}
+        a = ad.first_ath(d)
+        if a:
+            out["ath"][s] = a
+        x = ad.dma_cross(d, (9, 21, 50))
+        if x:
+            out["dma"][s] = x
+
+    # lock-in dates on every card
+    for k in out:
+        for s, card in out[k].items():
+            lst, d = ipos[s]
+            first = d.index[0].date()
+            if s in listed and (listed[s] - first).days > 30:
+                card["lockin_note"] = "Moved to NSE main board from SME - lock-ins follow the original SME listing"
+            card["lockin"] = ad.lockins(lst, today)
     return out, note
