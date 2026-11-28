@@ -47,6 +47,7 @@ import sector_rotation as sr
 import long_base_scanner as lb
 import ipo_zone as iz
 import ath_dma as ad
+import rsi_scanner as rsi
 
 HERE = Path(__file__).resolve().parent
 DOCS = HERE / "docs" / "data"
@@ -433,7 +434,7 @@ def main(argv=None):
         listed = ip.listing_dates()
     except Exception:
         listed = {}
-    hits = {k: {} for k in ("flag", "elliott", "base", "accum", "ipo", "ath", "dma", "s2early", "s2late")}
+    hits = {k: {} for k in ("flag", "elliott", "base", "accum", "ipo", "ath", "dma", "rsi", "s2early", "s2late")}
     recent = {s for s, d in prices.items() if (today - d.index[0].date()).days <= iz.YEARS * 365 + 30}
     for i, (s, d) in enumerate(prices.items(), 1):
         d = d.dropna(subset=["High", "Low", "Close"])
@@ -442,7 +443,8 @@ def main(argv=None):
                         ("ipo", lambda: lb.scan_ipo(s, d, now, listed.get(s))),
                         ("ath", lambda: None if s in recent or (listed.get(s) and (today - listed[s]).days <= iz.YEARS * 365)
                          else ad.first_ath(d)),
-                        ("dma", lambda: ad.dma_cross(d, (50, 150, 200)))):
+                        ("dma", lambda: ad.dma_cross(d, (50, 150, 200))),
+                        ("rsi", lambda: rsi.scan(d))):
             try:
                 r = fn()
                 if r:
