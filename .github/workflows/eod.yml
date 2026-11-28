@@ -34,4 +34,5 @@ jobs:
           git add cache/sectors.csv 2>/dev/null || true
           git add cache/listing_day_deals.json 2>/dev/null || true
           git commit -m "EOD scan $(date -u +%Y-%m-%d)" || echo "nothing new"
+          git pull --rebase origin main || true
           git push
