@@ -66,8 +66,15 @@ def etf_list(es, log=print) -> tuple[dict, str]:
     return {x: "" for x in FALLBACK}, "built-in list (NSE did not answer)"
 
 
+AMC = re.compile(r"\b(ADITYA BIRLA SUN LIFE|ABSL|ICICI PRUDENTIAL|ICICI PRU|MIRAE ASSET|MOTILAL OSWAL|NIPPON INDIA|"
+                 r"BARODA BNP PARIBAS|BAJAJ FINSERV|LIC MF|360 ONE|ANGEL ONE|DSP|HDFC|SBI|KOTAK|AXIS|UTI|ZERODHA|"
+                 r"GROWW|BANDHAN|EDELWEISS|TATA|INVESCO INDIA|INVESCO|QUANTUM|NAVI|UNION|HSBC|PGIM|SAMCO|SHRIRAM|"
+                 r"WHITEOAK CAPITAL|MAHINDRA MANULIFE|ITI|JM|CAPITALMIND|OLD BRIDGE|CHOICE)\b")
+
+
 def _key(underlying: str, sym: str) -> str:
-    u = re.sub(r"\b(INDEX|TRI|ETF|TOTAL RETURN|FUND)\b", "", underlying.upper())
+    u = AMC.sub("", underlying.upper())
+    u = re.sub(r"\b(INDEX|TRI|ETF|TOTAL RETURN|FUND|EXCHANGE TRADED|S&P)\b", "", u)
     u = re.sub(r"[^A-Z0-9]", "", u)
     return u or sym
 

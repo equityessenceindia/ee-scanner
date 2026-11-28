@@ -49,12 +49,12 @@ def scan(d: pd.DataFrame, show_all: bool = False) -> dict | None:
     since = cross.index[-1] if len(cross) else None
     px = float(c.iloc[-1])
     hi52 = float(d["High"].iloc[-252:].max())
-    facts = [["RSI monthly / weekly / daily", f"{m:.0f} / {w:.0f} / {dd:.0f}"],
+    facts = [["RSI monthly / weekly / daily", f"{m:.1f} / {w:.1f} / {dd:.1f}"],
              ["Monthly RSI above 60", f"{months} month{'s' if months != 1 else ''}" + (" (new)" if months <= 1 else "")],
              ["Daily RSI above 50 since", since.strftime("%d %b %Y") if since is not None else "over a year"],
              ["From 52-week high", f"{(px / hi52 - 1) * 100:+.1f}%"]]
     if not ok:
-        miss = [f"{n} {v:.0f} (needs > {t:.0f})" for n, v, t in (("monthly", m, M_MIN), ("weekly", w, W_MIN), ("daily", dd, D_MIN)) if not v > t]
+        miss = [f"{n} {v:.1f} (needs > {t:.0f})" for n, v, t in (("monthly", m, M_MIN), ("weekly", w, W_MIN), ("daily", dd, D_MIN)) if not v > t]
         return {"status": "Not yet: " + ", ".join(miss), "facts": facts[:1] + facts[3:], "levels": {},
                 "sort": -(m + w + dd), "pass": False, "rsi": [round(m, 1), round(w, 1), round(dd, 1)]}
     status = ("Fresh: monthly RSI just crossed 60" if months <= 1 else
