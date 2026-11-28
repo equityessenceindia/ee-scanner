@@ -8,8 +8,8 @@ TCS,TCS,Large
 BAJFINANCE,Bajaj Finance,Large
 LT,Larsen & Toubro,Large
 LICI,Life Insurance,Mid
-KOTAKBANK,Kotak Mah. Bank,Large
 HINDUNILVR,Hind. Unilever,Large
+KOTAKBANK,Kotak Mah. Bank,Large
 INFY,Infosys,Large
 SUNPHARMA,Sun Pharma.Inds.,Large
 ADANIPORTS,Adani Ports,Large
@@ -35,11 +35,11 @@ NESTLEIND,Nestle India,Large
 POWERGRID,Power Grid Corpn,Large
 ASIANPAINT,Asian Paints,Large
 COALINDIA,Coal India,Large
-HINDZINC,Hindustan Zinc,Large
 DMART,Avenue Super.,Large
+HINDZINC,Hindustan Zinc,Large
 EICHERMOT,Eicher Motors,Large
-ADANIGREEN,Adani Green,Large
 INDIGO,Interglobe Aviat,Large
+ADANIGREEN,Adani Green,Large
 SHRIRAMFIN,Shriram Finance,Large
 TVSMOTOR,TVS Motor Co.,Large
 GRASIM,Grasim Inds,Large
@@ -69,8 +69,8 @@ BHEL,B H E L,Mid
 BOSCHLTD,Bosch,Large
 VAML,Vedanta Aluminium Metal,Large
 TATACAP,Tata Capital,Large
-BANKBARODA,Bank of Baroda,Large
 VBL,Varun Beverages,Large
+BANKBARODA,Bank of Baroda,Large
 GROWW,Billionbrains,Mid
 POWERINDIA,Hitachi Energy,Large
 LAURUSLABS,Laurus Labs,Mid
@@ -80,12 +80,12 @@ BAJAJHLDNG,Bajaj Holdings,Large
 LTM,LTM,Large
 SIEMENS,Siemens,Large
 HDFCLIFE,HDFC Life Insur.,Large
-INDIANB,Indian Bank,Mid
 INDHOTEL,Indian Hotels Co,Mid
-LODHA,Lodha Developers,Mid
+INDIANB,Indian Bank,Mid
 IDEA,Vodafone Idea,Large
-CGPOWER,CG Power & Ind,Large
+LODHA,Lodha Developers,Mid
 LENSKART,Lenskart Solut.,Mid
+CGPOWER,CG Power & Ind,Large
 BRITANNIA,Britannia Inds.,Large
 GAIL,GAIL (India),Large
 LGEINDIA,LG Electronics,Mid
@@ -93,16 +93,16 @@ MARICO,Marico,Mid
 MEESHO,Meesho,Mid
 CANBK,Canara Bank,Large
 CUMMINSIND,Cummins India,Large
-HDFCAMC,HDFC AMC,Large
 CIPLA,Cipla,Large
 JINDALSTEL,Jindal Steel,Large
+HDFCAMC,HDFC AMC,Large
 DRREDDY,Dr Reddy's Labs,Large
 ZYDUSLIFE,Zydus Lifesci.,Large
 TATACONSUM,Tata Consumer,Large
 HEROMOTOCO,Hero Motocorp,Mid
 ABCAPITAL,Aditya Birla Cap,Mid
-PAYTM,One 97,Mid
 POLYCAB,Polycab India,Large
+PAYTM,One 97,Mid
 MANKIND,Mankind Pharma,Mid
 ENRIN,Siemens Ener.Ind,Large
 GVT&D,GE Vernova T&D,Mid
@@ -125,8 +125,8 @@ GODREJCP,Godrej Consumer,Large
 LUPIN,Lupin,Mid
 COFORGE,Coforge,Mid
 SHREECEM,Shree Cement,Mid
-ASHOKLEY,Ashok Leyland,Mid
 FEDERALBNK,Federal Bank,Mid
+ASHOKLEY,Ashok Leyland,Mid
 JSWENERGY,JSW Energy,Mid
 LLOYDSME,Lloyds Metals,Mid
 ICICIGI,ICICI Lombard,Mid
@@ -144,22 +144,22 @@ BHARTIHEXA,Bharti Hexacom,Mid
 RECLTD,REC Ltd,Mid
 PRESTIGE,Prestige Estates,Mid
 MAZDOCK,Mazagon Dock,Large
-SRF,SRF,Mid
 NHPC,NHPC Ltd,Mid
+SRF,SRF,Mid
 ATHERENERG,Ather Energy,Small
 IDFCFIRSTB,IDFC First Bank,Mid
 INDUSINDBK,IndusInd Bank,Mid
-BANKINDIA,Bank of India,Mid
 AUBANK,AU Small Finance,Mid
+BANKINDIA,Bank of India,Mid
 MOTILALOFS,Motil.Oswal.Fin.,Mid
 MAHABANK,Bank of Maha,Mid
 DABUR,Dabur India,Mid
 HAVELLS,Havells India,Mid
 OIL,Oil India,Mid
-LTF,L&T Finance Ltd,Mid
 NTPCGREEN,NTPC Green Ene.,Mid
-WAAREEENER,Waaree Energies,Mid
+LTF,L&T Finance Ltd,Mid
 OBEROIRLTY,Oberoi Realty,Mid
+WAAREEENER,Waaree Energies,Mid
 KALYANKJIL,Kalyan Jewellers,Mid
 ICICILIFE,ICICI Life Insurance,Mid
 SAIL,S A I L,Mid
@@ -174,10 +174,10 @@ RBLBANK,RBL Bank,Small
 ATGL,Adani Total Gas,Mid
 NMDC,NMDC,Mid
 LINDEINDIA,Linde India,Mid
-JSL,Jindal Stain.,Mid
-IOB,I O B,Mid
-BIOCON,Biocon,Mid
 APARINDS,Apar Inds.,Mid
+IOB,I O B,Mid
+JSL,Jindal Stain.,Mid
+BIOCON,Biocon,Mid
 GICRE,General Insuranc,Mid
 GODREJPROP,Godrej Propert.,Mid
 TORNTPOWER,Torrent Power,Mid
@@ -207,8 +207,8 @@ TATACOMM,Tata Comm,Mid
 PETRONET,Petronet LNG,Mid
 COLPAL,Colgate-Palmoliv,Mid
 UPL,UPL,Mid
-GLAXO,Glaxosmi. Pharma,Mid
 AIIL,Authum Invest,Mid
+GLAXO,Glaxosmi. Pharma,Mid
 MPHASIS,Mphasis,Mid
 SUNDARMFIN,Sundaram Finance,Mid
 PIRAMALFIN,Piramal Finance.,Mid
@@ -244,18 +244,18 @@ IRCTC,I R C T C,Mid
 WOCKPHARMA,Wockhardt,Small
 SHYAMMETL,Shyam Metalics,Small
 ENDURANCE,Endurance Tech.,Mid
-KARURVYSYA,Karur Vysya Bank,Small
 KEI,KEI Industries,Mid
+KARURVYSYA,Karur Vysya Bank,Small
 BAGMANE,Bagmane Prime REIT,Small
 BLUESTARCO,Blue Star,Mid
-IREDA,Indian Renewable,Mid
 GODREJIND,Godrej Industrie,Mid
+IREDA,Indian Renewable,Mid
+PAGEIND,Page Industries,Mid
 ANGELONE,Angel One,Small
 DELHIVERY,Delhivery,Small
-PAGEIND,Page Industries,Mid
 EXIDEIND,Exide Inds.,Mid
-NUVAMA,Nuvama Wealth,Small
 ASTRAL,Astral,Mid
+NUVAMA,Nuvama Wealth,Small
 UBL,United Breweries,Mid
 STARHEALTH,Star Health Insu,Small
 ACUTAAS,Acutaas Chemical,Small
@@ -279,10 +279,10 @@ PNBHOUSING,PNB Housing,Small
 ACMESOLAR,ACME Solar Hold.,Small
 CENTRALBK,Central Bank,Small
 URBANCO,Urban Company,Small
-COCHINSHIP,Cochin Shipyard,Mid
 GABRIEL,Gabriel India,Small
-ASAHIINDIA,Asahi India Glas,Small
+COCHINSHIP,Cochin Shipyard,Mid
 SANSERA,Sansera Enginee.,Small
+ASAHIINDIA,Asahi India Glas,Small
 TATAINVEST,Tata Inv.Corpn.,Mid
 MRPL,M R P L,Small
 SYRMA,Syrma SGS Tech.,Small
@@ -291,8 +291,8 @@ CRISIL,CRISIL,Mid
 TATATECH,Tata Technolog.,Small
 ABSLAMC,Aditya AMC,Small
 GODFRYPHLP,Godfrey Phillips,Mid
-DALBHARAT,Dalmia BharatLtd,Mid
 JUBLFOOD,Jubilant Food.,Mid
+DALBHARAT,Dalmia BharatLtd,Mid
 MSUMI,Motherson Wiring,Small
 HSCL,Himadri Special,Small
 NEULANDLAB,Neuland Labs.,Small
@@ -301,21 +301,21 @@ APOLLOTYRE,Apollo Tyres,Small
 WELSPUNLIV,Welspun Living,Small
 BANDHANBNK,Bandhan Bank,Small
 FORCEMOT,Force Motors,Small
-HFCL,HFCL,Small
 BIRET,Brookfield India,Small
+HFCL,HFCL,Small
 REDINGTON,Redington,Small
 MANAPPURAM,Manappuram Fin.,Small
 CEMPRO,Cemindia Project,Small
-KIRLOSENG,Kirloskar Oil,Small
 HONAUT,Honeywell Auto,Small
+KIRLOSENG,Kirloskar Oil,Small
 CHOLAHLDNG,Chola Financial,Small
 IIFL,IIFL Finance,Small
 SUNTV,Sun TV Network,Small
 ZFCVINDIA,ZF Commercial,Small
 ITI,ITI,Small
 SCHNEIDER,Schneider Elect.,Small
-GRSE,Garden Reach Sh.,Small
 NETWEB,Netweb Technol.,Small
+GRSE,Garden Reach Sh.,Small
 NIACL,New India Assura,Small
 PIIND,P I Industries,Mid
 DATAPATTNS,Data Pattern,Small
@@ -353,13 +353,13 @@ RAMCOCEM,The Ramco Cement,Small
 INOXINDIA,Inox India,Small
 CARBORUNIV,Carborundum Uni.,Small
 COHANCE,Cohance Life,Small
-KAJARIACER,Kajaria Ceramics,Small
 PINELABS,Pine Labs,Small
+KAJARIACER,Kajaria Ceramics,Small
 SHRIPISTON,SPR Auto Technologies,Small
 CASTROLIND,Castrol India,Small
 EMMVEE,Emmvee Photovol.,Small
-AADHARHFC,Aadhar Hsg. Fin.,Small
 IGIL,International Gemological Instit,Small
+AADHARHFC,Aadhar Hsg. Fin.,Small
 PFOCUS,Prime Focus,Small
 CAMS,Cams Services,Small
 J&KBANK,J & K Bank,Small
@@ -387,8 +387,8 @@ POLYMED,Poly Medicure,Small
 PGEL,PG Electroplast,Small
 ZENTEC,Zen Technologies,Small
 ANANTRAJ,Anant Raj,Small
-TBOTEK,TBO Tek,Small
 CREDITACC,CreditAcc. Gram.,Small
+TBOTEK,TBO Tek,Small
 OLAELEC,Ola Electric,Small
 VIJAYA,Vijaya Diagnost.,Small
 AARTIIND,Aarti Industries,Small
@@ -396,12 +396,12 @@ ACE,Action Const.Eq.,Small
 IFCI,IFCI,Small
 NATCOPHARM,Natco Pharma,Small
 CAPLIPOINT,Caplin Point Lab,Small
-DEVYANI,Devyani Intl.,Small
 AZAD,Azad Engineering,Small
+DEVYANI,Devyani Intl.,Small
 GRAPHITE,Graphite India,Small
-NAVA,Nava,Small
 BBOX,Black Box,Small
 JINDALSAW,Jindal Saw,Small
+NAVA,Nava,Small
 VTL,Vardhman Textile,Small
 SAMMAANCAP,Sammaan Capital,Small
 ATUL,Atul,Small
@@ -422,8 +422,8 @@ BALRAMCHIN,Balrampur Chini,Small
 KPITTECH,KPIT Technologi.,Small
 GPIL,Godawari Power,Small
 ABREL,A B Real Estate,Small
-CIEINDIA,CIE Automotive,Small
 USHAMART,Usha Martin,Small
+CIEINDIA,CIE Automotive,Small
 FRACTAL,Fractal Analyt.,Small
 DOMS,DOMS Industries,Small
 SOBHA,Sobha,Small
@@ -464,8 +464,8 @@ TECHNOE,Techno Elec.Engg,Small
 PCBL,PCBL Chemical,Small
 TITAGARH,Titagarh Rail,Small
 WHIRLPOOL,Whirlpool India,Small
-IEX,Indian Energy Ex,Small
 ELECON,Elecon Engg.Co,Small
+IEX,Indian Energy Ex,Small
 LEMONTREE,Lemon Tree Hotel,Small
 INDIACEM,India Cements,Small
 AVANTIFEED,Avanti Feeds,Small
@@ -482,8 +482,8 @@ JPPOWER,JP Power Ven.,Small
 BLS,BLS Internat.,Small
 AAVAS,AAVAS Financiers,Small
 TARIL,T R I L,Small
-OLECTRA,Olectra Greentec,Small
 BSOFT,Birlasoft Ltd,Small
+OLECTRA,Olectra Greentec,Small
 FIRSTCRY,Brainbees Solut.,Small
 INTELLECT,Intellect Design,Small
 NCC,NCC,Small
