@@ -178,6 +178,8 @@ const SCANS = [
    rules:["Close crossed above the simple moving average in the last 3 sessions and is still above it","At least 8 of the 10 closes before the cross were below the average — a fresh cross, not chop around it","Card shows whether the average is rising, the volume on the cross day and where price sits against the other averages"]},
   {k:"rsi", t:"RSI Momentum", d:"Monthly and weekly RSI above 60 and daily RSI above 50 — momentum on all three timeframes, in companies whose management holds regular concalls.",
    rules:["RSI(14), Wilder's method on closing prices (same as TradingView and Kite)","Monthly RSI > 60, weekly RSI > 60, daily RSI > 50","The current month and week count as they stand today (not yet closed)","'Fresh' = monthly RSI crossed above 60 this month; the card also shows since when daily RSI has been above 50","Sorted by the sum of the three RSIs, strongest first"]},
+  {k:"etfrsi", t:"ETF RSI", d:"Liquid NSE ETFs with monthly and weekly RSI above 60 and daily RSI above 50 — the same momentum rule as RSI Momentum.",
+   rules:["All ETFs on NSE with an average traded value of ₹1 crore or more a day (last 20 sessions)","Money-market, liquid, overnight and bond ETFs are left out","When several ETFs track the same index, only the most traded one is shown; the others are named on its card","RSI(14), Wilder's method: monthly > 60, weekly > 60, daily > 50 (current month and week as they stand today)","'All liquid ETFs' shows every ETF with its three RSI values and what it still needs"]},
   {k:"concalls", t:"Concalls", d:"Latest earnings calls in this group: results versus a year ago and the key numbers management gave on the call.",
    rules:["Calls held in the last ~75 days, newest first","Results from the quarterly table; quotes picked automatically from the transcript (guidance, orders, capex, margins)","Companies with irregular concalls are marked"]},
   {k:"sectors", t:"Sector Rotation", d:"Which sectors money is moving into or out of, and which sector ETF charts look bullish on the long-term (weekly / monthly) view.",
@@ -192,7 +194,7 @@ const SCANS = [
 ];
 const CAPS = ["Large","Mid","Small","Micro"];
 const D = window.SCAN_DATA || null;
-const st = {dm: get("dm") || "50", di: get("di") || "9", ts: get("ts") || "All", cap: get("cap") || "Small", scan: get("scan") || "flag", q: "", sv: get("sv") || "flow", fg: get("fg") || "All", iz: get("iz") || "deals"};
+const st = {er: get("er") || "pass", dm: get("dm") || "50", di: get("di") || "9", ts: get("ts") || "All", cap: get("cap") || "Small", scan: get("scan") || "flag", q: "", sv: get("sv") || "flow", fg: get("fg") || "All", iz: get("iz") || "deals"};
 function get(k){try{return localStorage.getItem("ee_"+k)}catch(e){return null}}
 function set(k,v){try{localStorage.setItem("ee_"+k,v)}catch(e){}}
 const $ = s => document.querySelector(s);
@@ -204,12 +206,12 @@ function list(cap, scan){ return (D && D.caps && D.caps[cap] && D.caps[cap][scan
 
 function renderTabs(){
   $("#caps").innerHTML = CAPS.map(c => {
-    const n = SCANS.filter(s=>!["concalls","sectors","ipozone"].includes(s.k)).reduce((a,s)=>a+list(c,s.k).length,0);
+    const n = SCANS.filter(s=>!["concalls","sectors","ipozone","etfrsi"].includes(s.k)).reduce((a,s)=>a+list(c,s.k).length,0);
     return `<button role="tab" aria-selected="${c===st.cap}" data-cap="${c}">${c}<small>${n} setups</small></button>`;
   }).join("");
   $("#chips").innerHTML = SCANS.map(s =>
-    `<button role="tab" aria-selected="${s.k===st.scan}" data-scan="${s.k}">${s.t}${["sectors","ipozone"].includes(s.k)?"":`<span class="n">${list(st.cap,s.k).length}</span>`}</button>`).join("");
-  $("#caps").style.display = ["sectors","ipozone"].includes(st.scan) ? "none" : "";
+    `<button role="tab" aria-selected="${s.k===st.scan}" data-scan="${s.k}">${s.t}${["sectors","ipozone","etfrsi"].includes(s.k)?"":`<span class="n">${list(st.cap,s.k).length}</span>`}</button>`).join("");
+  $("#caps").style.display = ["sectors","ipozone","etfrsi"].includes(st.scan) ? "none" : "";
 }
 
 function lockBlock(x){
@@ -222,7 +224,7 @@ function lockBlock(x){
 }
 function card(x){
   const chg = x.chg==null ? "" : `<span class="${x.chg>=0?"up":"down"}">${x.chg>=0?"+":""}${x.chg.toFixed(2)}%</span>`;
-  const warn = /Topping|Late|Failed/.test(x.status) ? " warn" : "";
+  const warn = /Topping|Late|Failed|Not yet/.test(x.status) ? " warn" : "";
   const lv = Object.entries(x.levels||{}).slice(0,3).map(([k,v])=>`<div><small>${esc(k)}</small><b>${money(v)}</b></div>`).join("");
   const facts = (x.facts||[]).map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("");
   const cc = x.concalls||{};
@@ -234,11 +236,11 @@ function card(x){
     <dl>${facts}</dl>
     ${lv?`<div class="lv">${lv}</div>`:""}
     ${lockBlock(x)}
-    <div class="cc"><span class="dot"></span>Concalls ${esc(cc.status||"")}${cc.n24!=null?` · ${cc.n24} in 24 months`:""}${cc.last?` · last ${esc(cc.last)}`:""}</div>
+    ${x.concalls?"":"<!--"}<div class="cc"><span class="dot"></span>Concalls ${esc(cc.status||"")}${cc.n24!=null?` · ${cc.n24} in 24 months`:""}${cc.last?` · last ${esc(cc.last)}`:""}</div>${x.concalls?"":"-->"}
     ${(x.results||[]).length?`<div class="res"><b>${esc(x.quarter)}:</b> ${x.results.map(esc).join(" · ")}</div>`:""}
     <div class="links">
       <a href="https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(x.sym)}" target="_blank" rel="noopener">Chart</a>
-      <a href="https://www.screener.in/company/${encodeURIComponent(x.sym)}/" target="_blank" rel="noopener">Screener</a>
+      ${x.concalls?`<a href="https://www.screener.in/company/${encodeURIComponent(x.sym)}/" target="_blank" rel="noopener">Screener</a>`:""}
     </div>
   </article>`;
 }
@@ -409,6 +411,20 @@ function renderIpoZone(){
   return seg + diBar + mini + note + (rows.length ? rows.map(card).join("") : `<div class="empty"><b>Nothing here today</b>No stock in this group meets the rule.</div>`);
 }
 
+// ---------------------------------------------------------------- ETF RSI
+function renderEtfRsi(){
+  const E = (D && D.etf_rsi) || {}, rows = E.rows || [];
+  if(!rows.length) return `<div class="empty"><b>No ETF data yet</b>It appears after the next daily update.</div>`;
+  const pass = rows.filter(r=>r.pass), k = st.er==="all" ? "all" : "pass";
+  const show = k==="all" ? rows : pass;
+  const bar = `<div class="mini"><button aria-selected="${k==="pass"}" data-er="pass">Passing ${pass.length}</button><button aria-selected="${k==="all"}" data-er="all">All liquid ETFs ${rows.length}</button></div>`;
+  const q = st.q.trim().toLowerCase();
+  const list = q ? show.filter(x=>(x.sym+" "+x.name).toLowerCase().includes(q)) : show;
+  return bar + `<input class="search" type="search" placeholder="Search ETF or index" value="${esc(st.q)}" id="q">`
+    + `<p class="sum">${E.liquid} liquid ETFs (₹${E.min_cr} cr+ a day), one per index. Source: ${esc(E.source||"")}.</p>`
+    + (list.length ? list.map(card).join("") : `<div class="empty"><b>Nothing here</b>${q?"No match for your search.":"No liquid ETF meets all three RSI conditions today."}</div>`);
+}
+
 function render(){
   renderTabs();
   const s = SCANS.find(z=>z.k===st.scan) || SCANS[0];
@@ -419,13 +435,14 @@ function render(){
     items = items.filter(x=>(x.tags||[]).includes(k)); }
   const q = st.q.trim().toLowerCase();
   if(q) items = items.filter(x => (x.sym+" "+x.name).toLowerCase().includes(q));
-  const head = `<div class="head"><div style="flex:1"><h2>${s.t}${["sectors","ipozone"].includes(s.k)?"":` · ${st.cap} caps`}</h2><p>${esc(s.d)}</p></div>
+  const head = `<div class="head"><div style="flex:1"><h2>${s.t}${["sectors","ipozone","etfrsi"].includes(s.k)?"":` · ${st.cap} caps`}</h2><p>${esc(s.d)}</p></div>
     <button class="iconbtn" data-info="${s.k}" aria-label="How this scan works">i</button></div>
-    ${["sectors","ipozone"].includes(s.k)?"":`<input class="search" type="search" placeholder="Search symbol or company" value="${esc(st.q)}" id="q">`}`;
+    ${["sectors","ipozone","etfrsi"].includes(s.k)?"":`<input class="search" type="search" placeholder="Search symbol or company" value="${esc(st.q)}" id="q">`}`;
   let body;
   const banner = D && D.sample ? `<div class="card" style="background:var(--warnBg);border-color:transparent;color:var(--warn);font-size:13px">Sample data from your laptop scans (small and micro caps only). All four groups fill in after the first daily update.</div>` : "";
   if(D && s.k==="sectors") body = renderSectors();
   else if(D && s.k==="ipozone") body = renderIpoZone();
+  else if(D && s.k==="etfrsi") body = renderEtfRsi();
   else if(!D) body = `<div class="empty"><b>No scan data yet</b>The first daily update has not run. Check back after 5 PM IST.</div>`;
   else if(!items.length) body = `<div class="empty"><b>Nothing today</b>${q?"No match for your search.":"No "+st.cap.toLowerCase()+"-cap stock passed this scan and the concall filter."}</div>`;
   else body = s.k==="concalls" ? items.map(concallCard).join("") : items.map(card).join("");
@@ -440,6 +457,7 @@ document.addEventListener("click", e => {
   const c = e.target.closest("[data-cap]"); if(c){ st.cap=c.dataset.cap; set("cap",st.cap); render(); return; }
   const s = e.target.closest("[data-scan]"); if(s){ st.scan=s.dataset.scan; set("scan",st.scan); st.q=""; render(); window.scrollTo({top:0}); return; }
   const v = e.target.closest("[data-sv]"); if(v){ st.sv=v.dataset.sv; set("sv",st.sv); render(); return; }
+  const er = e.target.closest("[data-er]"); if(er){ st.er=er.dataset.er; set("er",st.er); render(); return; }
   const dm = e.target.closest("[data-dm]"); if(dm){ st.dm=dm.dataset.dm; set("dm",st.dm); render(); return; }
   const di = e.target.closest("[data-di]"); if(di){ st.di=di.dataset.di; set("di",st.di); render(); return; }
   const ts = e.target.closest("[data-ts]"); if(ts){ st.ts=ts.dataset.ts; set("ts",st.ts); render(); return; }
@@ -447,7 +465,7 @@ document.addEventListener("click", e => {
   const g = e.target.closest("[data-fg]"); if(g){ st.fg=g.dataset.fg; set("fg",st.fg); render(); return; }
   const m = e.target.closest("[data-more]"); if(m){ const el=document.getElementById(m.dataset.more); el.hidden=!el.hidden; m.textContent = el.hidden ? m.textContent.replace("Hide","Key points") : m.textContent.replace("Key points","Hide"); return; }
   const i = e.target.closest("[data-info]"); if(i){ const s=SCANS.find(z=>z.k===i.dataset.info);
-    $("#infoT").textContent = s.t; $("#infoB").innerHTML = `<p>${esc(s.d)}</p><ul>${s.rules.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>${["sectors","ipozone"].includes(s.k)?"":"<p>Every list keeps only companies that hold concalls regularly (4+ calls in 24 months, latest within 7 months).</p>"}`;
+    $("#infoT").textContent = s.t; $("#infoB").innerHTML = `<p>${esc(s.d)}</p><ul>${s.rules.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>${["sectors","ipozone","etfrsi"].includes(s.k)?"":"<p>Every list keeps only companies that hold concalls regularly (4+ calls in 24 months, latest within 7 months).</p>"}`;
     $("#info").showModal(); }
 });
 $("#refresh").onclick = () => location.reload();

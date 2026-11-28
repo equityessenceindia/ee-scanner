@@ -27,9 +27,11 @@ def rsi(close: pd.Series, n: int = N) -> pd.Series:
     return out.where(dn > 0, 100.0).where(up.notna())
 
 
-def scan(d: pd.DataFrame) -> dict | None:
+def scan(d: pd.DataFrame, show_all: bool = False) -> dict | None:
+    """Card if monthly > 60, weekly > 60, daily > 50. show_all=True returns a card for any stock
+    with enough history (with "pass" set), used by the ETF view."""
     c = d["Close"].dropna()
-    if len(c) < 400:                                   # need ~15+ months for a monthly RSI
+    if len(c) < 330:                                   # need ~15 months for a monthly RSI
         return None
     rd = rsi(c)
     rw = rsi(c.resample("W-FRI").last().dropna())
@@ -37,7 +39,8 @@ def scan(d: pd.DataFrame) -> dict | None:
     if rm.dropna().empty or rw.dropna().empty:
         return None
     m, w, dd = float(rm.iloc[-1]), float(rw.iloc[-1]), float(rd.iloc[-1])
-    if not (m > M_MIN and w > W_MIN and dd > D_MIN):
+    ok = m > M_MIN and w > W_MIN and dd > D_MIN
+    if not ok and not show_all:
         return None
     # how long monthly RSI has been above 60, and when the daily last crossed above 50
     above = (rm > M_MIN).values[::-1]
@@ -50,10 +53,14 @@ def scan(d: pd.DataFrame) -> dict | None:
              ["Monthly RSI above 60", f"{months} month{'s' if months != 1 else ''}" + (" (new)" if months <= 1 else "")],
              ["Daily RSI above 50 since", since.strftime("%d %b %Y") if since is not None else "over a year"],
              ["From 52-week high", f"{(px / hi52 - 1) * 100:+.1f}%"]]
+    if not ok:
+        miss = [f"{n} {v:.0f} (needs > {t:.0f})" for n, v, t in (("monthly", m, M_MIN), ("weekly", w, W_MIN), ("daily", dd, D_MIN)) if not v > t]
+        return {"status": "Not yet: " + ", ".join(miss), "facts": facts[:1] + facts[3:], "levels": {},
+                "sort": -(m + w + dd), "pass": False, "rsi": [round(m, 1), round(w, 1), round(dd, 1)]}
     status = ("Fresh: monthly RSI just crossed 60" if months <= 1 else
               "Daily RSI just turned above 50" if since is not None and since >= c.index[-5] else
               "Momentum on all three timeframes")
     return {"status": status, "facts": facts,
             "levels": {"50-DMA": round(float(c.rolling(50).mean().iloc[-1]), 2),
                        "52w high": round(hi52, 2)},
-            "sort": -(m + w + dd)}
+            "sort": -(m + w + dd), "pass": True, "rsi": [round(m, 1), round(w, 1), round(dd, 1)]}

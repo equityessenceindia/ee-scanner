@@ -48,6 +48,7 @@ import long_base_scanner as lb
 import ipo_zone as iz
 import ath_dma as ad
 import rsi_scanner as rsi
+import etf_rsi
 
 HERE = Path(__file__).resolve().parent
 DOCS = HERE / "docs" / "data"
@@ -477,6 +478,11 @@ def main(argv=None):
     cand |= {s for s in recent if "shp" not in old.get(s, {})}          # IPOs need shareholding once
     comp = company_pages(sorted(meta), force=cand)
 
+    etf_view = {}
+    try:
+        etf_view = etf_rsi.build(es, sr.download, log)
+    except Exception as e:
+        log(f"ETF RSI failed: {e}")
     log("Sector rotation ...")
     sectors, sector_of = sr.run(prices, {s: m["cap"] for s, m in meta.items()})
     for s in early_c | late_c:
@@ -537,7 +543,7 @@ def main(argv=None):
 
     data = {"asof": asof.isoformat(), "generated": now.strftime("%Y-%m-%d %H:%M IST"),
             "universe": {c: int((uni["cap"] == c).sum()) for c in CAPS},
-            "dropped_no_concalls": dropped, "caps": caps, "sectors": sectors, "ipo_zone": ipo_zone}
+            "dropped_no_concalls": dropped, "caps": caps, "sectors": sectors, "ipo_zone": ipo_zone, "etf_rsi": etf_view}
     txt = json.dumps(data, ensure_ascii=False, default=clean, separators=(",", ":"))
     (DOCS / "latest.json").write_text(txt, encoding="utf-8")
     (DOCS / "latest.js").write_text("window.SCAN_DATA=" + txt + ";", encoding="utf-8")
